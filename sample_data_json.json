@@ -1,0 +1,297 @@
+{
+  "properties": [
+    {
+      "property_id": "B01",
+      "area_sqm": 1000,
+      "occupancy": 0.9,
+      "baseline_emission": 12000,
+      "scope1_emission": 8000,
+      "scope2_emission": 4000,
+      "scope3_emission": 2000,
+      "retrofit_potential": "High",
+      "building_type": "Office",
+      "year_built": 2010,
+      "location": "Sydney CBD",
+      "green_star_rating": "4 Star",
+      "current_efficiency_measures": ["LED lighting", "Basic BMS"]
+    },
+    {
+      "property_id": "B02",
+      "area_sqm": 800,
+      "occupancy": 0.8,
+      "baseline_emission": 10000,
+      "scope1_emission": 6500,
+      "scope2_emission": 3500,
+      "scope3_emission": 1800,
+      "retrofit_potential": "Medium",
+      "building_type": "Retail",
+      "year_built": 2015,
+      "location": "Melbourne",
+      "green_star_rating": "5 Star",
+      "current_efficiency_measures": ["Efficient HVAC", "Smart lighting"]
+    },
+    {
+      "property_id": "B03",
+      "area_sqm": 1200,
+      "occupancy": 0.95,
+      "baseline_emission": 15000,
+      "scope1_emission": 9000,
+      "scope2_emission": 6000,
+      "scope3_emission": 3000,
+      "retrofit_potential": "High",
+      "building_type": "Office",
+      "year_built": 2008,
+      "location": "Brisbane",
+      "green_star_rating": "3 Star",
+      "current_efficiency_measures": ["Basic lighting"]
+    },
+    {
+      "property_id": "B04",
+      "area_sqm": 600,
+      "occupancy": 0.7,
+      "baseline_emission": 8000,
+      "scope1_emission": 5000,
+      "scope2_emission": 3000,
+      "scope3_emission": 1500,
+      "retrofit_potential": "Low",
+      "building_type": "Residential",
+      "year_built": 2018,
+      "location": "Perth",
+      "green_star_rating": "6 Star",
+      "current_efficiency_measures": ["Solar panels", "High efficiency appliances", "Smart meters"]
+    },
+    {
+      "property_id": "B05",
+      "area_sqm": 2000,
+      "occupancy": 0.85,
+      "baseline_emission": 25000,
+      "scope1_emission": 15000,
+      "scope2_emission": 10000,
+      "scope3_emission": 5000,
+      "retrofit_potential": "Medium",
+      "building_type": "Industrial",
+      "year_built": 2012,
+      "location": "Adelaide",
+      "green_star_rating": "4 Star",
+      "current_efficiency_measures": ["Efficient motors", "Waste heat recovery"]
+    }
+  ],
+  "reduction_options": [
+    {
+      "option_id": "LED001",
+      "name": "LED Lighting Upgrade",
+      "description": "Replace all traditional lighting with LED systems",
+      "co2_reduction": 800,
+      "capex": 30000,
+      "opex": 5000,
+      "priority": "High",
+      "implementation_time": 1,
+      "risk_level": "Low",
+      "applicable_building_types": ["Office", "Retail", "Industrial"],
+      "payback_period": 3.2,
+      "energy_savings_kwh": 15000
+    },
+    {
+      "option_id": "HVAC001",
+      "name": "HVAC System Upgrade",
+      "description": "Install high-efficiency HVAC system with smart controls",
+      "co2_reduction": 2000,
+      "capex": 80000,
+      "opex": 12000,
+      "priority": "High",
+      "implementation_time": 2,
+      "risk_level": "Medium",
+      "applicable_building_types": ["Office", "Retail", "Residential"],
+      "payback_period": 5.8,
+      "energy_savings_kwh": 35000
+    },
+    {
+      "option_id": "SOLAR001",
+      "name": "Solar PV Installation",
+      "description": "Rooftop solar photovoltaic system with battery storage",
+      "co2_reduction": 3000,
+      "capex": 150000,
+      "opex": 8000,
+      "priority": "Medium",
+      "implementation_time": 3,
+      "risk_level": "Low",
+      "applicable_building_types": ["Office", "Industrial", "Residential"],
+      "payback_period": 7.2,
+      "energy_generation_kwh": 55000
+    },
+    {
+      "option_id": "INSUL001",
+      "name": "Building Insulation Upgrade",
+      "description": "Improve building envelope with advanced insulation materials",
+      "co2_reduction": 1200,
+      "capex": 45000,
+      "opex": 2000,
+      "priority": "Medium",
+      "implementation_time": 2,
+      "risk_level": "Low",
+      "applicable_building_types": ["Office", "Residential", "Industrial"],
+      "payback_period": 4.5,
+      "energy_savings_kwh": 22000
+    },
+    {
+      "option_id": "SMART001",
+      "name": "Smart Building Management System",
+      "description": "IoT-enabled building automation and energy management",
+      "co2_reduction": 1500,
+      "capex": 60000,
+      "opex": 15000,
+      "priority": "Low",
+      "implementation_time": 1,
+      "risk_level": "Medium",
+      "applicable_building_types": ["Office", "Retail", "Industrial"],
+      "payback_period": 6.1,
+      "energy_savings_kwh": 28000
+    },
+    {
+      "option_id": "CREDIT001",
+      "name": "Carbon Credit Purchase",
+      "description": "Offset emissions through verified carbon credit programs",
+      "co2_reduction": 500,
+      "capex": 0,
+      "opex": 25000,
+      "priority": "Low",
+      "implementation_time": 0,
+      "risk_level": "High",
+      "applicable_building_types": ["Office", "Retail", "Industrial", "Residential"],
+      "payback_period": null,
+      "regulatory_risk": "High price volatility"
+    },
+    {
+      "option_id": "BIOFUEL001",
+      "name": "Green Fuel Switch",
+      "description": "Replace fossil fuel heating with renewable biofuel systems",
+      "co2_reduction": 1800,
+      "capex": 40000,
+      "opex": 20000,
+      "priority": "Medium",
+      "implementation_time": 1,
+      "risk_level": "Medium",
+      "applicable_building_types": ["Industrial", "Office"],
+      "payback_period": 5.5,
+      "energy_savings_kwh": 32000
+    },
+    {
+      "option_id": "WIND001",
+      "name": "Small Wind Turbine",
+      "description": "On-site wind energy generation for suitable locations",
+      "co2_reduction": 2200,
+      "capex": 120000,
+      "opex": 10000,
+      "priority": "Low",
+      "implementation_time": 4,
+      "risk_level": "High",
+      "applicable_building_types": ["Industrial"],
+      "payback_period": 8.9,
+      "energy_generation_kwh": 40000,
+      "site_requirements": "High wind exposure required"
+    }
+  ],
+  "benchmark_data": {
+    "office": {
+      "intensity_baseline": 85,
+      "reduction_potential": 0.65,
+      "typical_measures": ["LED upgrade", "HVAC optimization", "Building automation"],
+      "cost_per_kg_co2": 45,
+      "implementation_timeframe": "2-3 years"
+    },
+    "retail": {
+      "intensity_baseline": 120,
+      "reduction_potential": 0.55,
+      "typical_measures": ["Efficient lighting", "Refrigeration upgrade", "Smart controls"],
+      "cost_per_kg_co2": 52,
+      "implementation_timeframe": "1-2 years"
+    },
+    "residential": {
+      "intensity_baseline": 45,
+      "reduction_potential": 0.70,
+      "typical_measures": ["Solar installation", "Heat pump", "Insulation"],
+      "cost_per_kg_co2": 38,
+      "implementation_timeframe": "1-2 years"
+    },
+    "industrial": {
+      "intensity_baseline": 150,
+      "reduction_potential": 0.60,
+      "typical_measures": ["Process optimization", "Waste heat recovery", "Renewable energy"],
+      "cost_per_kg_co2": 65,
+      "implementation_timeframe": "3-5 years"
+    }
+  },
+  "monthly_emissions": {
+    "actual": {
+      "B01": [850, 820, 780, 760, 740, 720, 700, 680, 660, 640, 620, 600],
+      "B02": [720, 700, 680, 660, 640, 620, 600, 580, 560, 540, 520, 500],
+      "B03": [1100, 1080, 1050, 1020, 990, 960, 930, 900, 870, 840, 810, 780],
+      "B04": [580, 570, 560, 550, 540, 530, 520, 510, 500, 490, 480, 470],
+      "B05": [1800, 1750, 1700, 1650, 1600, 1550, 1500, 1450, 1400, 1350, 1300, 1250]
+    },
+    "targets": {
+      "B01": [800, 800, 800, 800, 800, 800, 800, 800, 800, 800, 800, 800],
+      "B02": [700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700],
+      "B03": [1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000],
+      "B04": [550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550],
+      "B05": [1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600]
+    }
+  },
+  "strategic_patterns": [
+    {
+      "pattern_name": "Conservative Linear",
+      "description": "Steady, linear reduction approach with minimal risk",
+      "annual_growth_rate": 0.0,
+      "front_loading": false,
+      "preferred_options": ["LED001", "INSUL001", "SMART001"],
+      "risk_tolerance": "Low",
+      "budget_profile": "Steady annual allocation"
+    },
+    {
+      "pattern_name": "Moderate Acceleration",
+      "description": "Balanced approach with gradual acceleration",
+      "annual_growth_rate": 0.05,
+      "front_loading": false,
+      "preferred_options": ["HVAC001", "SOLAR001", "LED001"],
+      "risk_tolerance": "Medium",
+      "budget_profile": "Increasing annual allocation"
+    },
+    {
+      "pattern_name": "Aggressive Front-loaded",
+      "description": "High initial investment for maximum early impact",
+      "annual_growth_rate": 0.10,
+      "front_loading": true,
+      "preferred_options": ["SOLAR001", "HVAC001", "WIND001"],
+      "risk_tolerance": "High",
+      "budget_profile": "High initial investment, lower maintenance"
+    }
+  ],
+  "compliance_targets": {
+    "australia_paris_agreement": {
+      "target_year": 2030,
+      "reduction_percentage": 0.43,
+      "baseline_year": 2005
+    },
+    "net_zero_commitment": {
+      "target_year": 2050,
+      "reduction_percentage": 1.0,
+      "interim_milestones": [
+        {"year": 2030, "reduction": 0.50},
+        {"year": 2035, "reduction": 0.65},
+        {"year": 2040, "reduction": 0.80},
+        {"year": 2045, "reduction": 0.90}
+      ]
+    },
+    "green_building_standards": {
+      "green_star": {
+        "minimum_rating": 5,
+        "energy_performance": "7.5 stars",
+        "carbon_neutral_certification": true
+      },
+      "nabers": {
+        "minimum_rating": 5.0,
+        "target_rating": 6.0
+      }
+    }
+  }
+}

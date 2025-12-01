@@ -1,0 +1,352 @@
+# EcoAssist SQL Server Database Setup Guide
+
+## Overview
+
+This guide provides complete setup instructions for the EcoAssist SQL Server database, including schema creation, sample data insertion, and Python integration.
+
+## Package Contents
+
+1. **01_create_database_schema.sql** - Complete database schema with tables, indexes, triggers
+2. **02_insert_sample_data.sql** - Sample data for testing and verification
+3. **database_integration.py** - Python integration code replacing in-memory storage
+4. **requirements_database.txt** - Additional Python dependencies
+5. **setup_database.py** - Automated setup script
+
+## Prerequisites
+
+### SQL Server Setup
+- **SQL Server 2019 or later** (Express edition is sufficient for development)
+- **SQL Server Management Studio (SSMS)** or Azure Data Studio
+- **ODBC Driver 17 for SQL Server** or later
+
+### Python Dependencies
+```bash
+pip install pyodbc pandas sqlalchemy python-dateutil
+```
+
+## Step 1: SQL Server Database Setup
+
+### Option A: Manual Setup (Recommended for Production)
+
+1. **Connect to SQL Server** using SSMS or Azure Data Studio
+
+2. **Run Schema Creation Script**
+   ```sql
+   -- Execute 01_create_database_schema.sql
+   -- This will create the EcoAssistDB database with all tables
+   ```
+
+3. **Insert Sample Data**
+   ```sql
+   -- Execute 02_insert_sample_data.sql
+   -- This will populate tables with test data
+   ```
+
+4. **Verify Installation**
+   ```sql
+   USE EcoAssistDB;
+   
+   -- Check table counts
+   SELECT 'properties' as table_name, COUNT(*) as record_count FROM properties
+   UNION ALL
+   SELECT 'reduction_options', COUNT(*) FROM reduction_options
+   UNION ALL
+   SELECT 'strategic_patterns', COUNT(*) FROM strategic_patterns
+   UNION ALL
+   SELECT 'milestone_scenarios', COUNT(*) FROM milestone_scenarios;
+   ```
+
+### Option B: Automated Setup
+
+1. **Run the setup script**
+   ```bash
+   python setup_database.py
+   ```
+
+## Step 2: Configure Database Connection
+
+### Update Connection Settings
+
+Edit the connection settings in `database_integration.py`:
+
+```python
+class DatabaseConfig:
+    def __init__(self):
+        self.server = "your-sql-server"        # Change this
+        self.database = "EcoAssistDB"
+        self.username = "your-username"        # Change this
+        self.password = "your-password"        # Change this
+        self.driver = "{ODBC Driver 17 for SQL Server}"
+```
+
+### Connection String Examples
+
+**Local SQL Server with Windows Authentication:**
+```python
+self.connection_string = (
+    f"DRIVER={self.driver};"
+    f"SERVER={self.server};"
+    f"DATABASE={self.database};"
+    "Trusted_Connection=yes;"
+)
+```
+
+**SQL Server with Username/Password:**
+```python
+self.connection_string = (
+    f"DRIVER={self.driver};"
+    f"SERVER={self.server};"
+    f"DATABASE={self.database};"
+    f"UID={self.username};"
+    f"PWD={self.password};"
+    "TrustServerCertificate=yes;"
+)
+```
+
+**Azure SQL Database:**
+```python
+self.connection_string = (
+    f"DRIVER={self.driver};"
+    f"SERVER={self.server}.database.windows.net;"
+    f"DATABASE={self.database};"
+    f"UID={self.username};"
+    f"PWD={self.password};"
+    "Encrypt=yes;"
+    "TrustServerCertificate=no;"
+)
+```
+
+## Step 3: Update Your API Code
+
+### Replace In-Memory Backend
+
+In your `rest_api_layer.py` or main application file:
+
+**Before (in-memory):**
+```python
+from ecoassist_backend import EcoAssistBackend
+
+backend = EcoAssistBackend()  # Uses in-memory data
+```
+
+**After (database):**
+```python
+from database_integration import initialize_database_backend, DatabaseConfig
+
+# Initialize with database
+backend = initialize_database_backend()
+```
+
+### Test Database Integration
+
+```python
+# Test the database connection
+python database_integration.py
+```
+
+Expected output:
+```
+Testing EcoAssist Database Integration...
+
+Loaded Data Summary:
+  Properties: 9
+  Reduction Options: 13
+  Milestone Scenarios: 4
+  Strategic Patterns: 5
+
+Testing milestone generation...
+Generated 4 new scenarios
+
+✅ Database integration test completed successfully!
+```
+
+## Step 4: Database Schema Overview
+
+### Core Data Tables (4 tables)
+- **properties** - Property master data (9 sample properties)
+- **reduction_options** - CO2 reduction measures (13 options)
+- **strategic_patterns** - Implementation strategies (5 patterns) 
+- **benchmark_data** - Industry benchmarks (3 benchmarks)
+
+### Historical Data Tables (3 tables)
+- **historical_consumption** - Energy consumption by fuel type
+- **historical_emissions** - Emissions by scope and fuel type
+- **historical_costs** - Cost data by fuel type and category
+
+### AI Results Tables (5 tables)
+- **milestone_scenarios** - AI-generated milestone scenarios
+- **property_targets** - Property-level target allocations
+- **long_term_plans** - Strategic long-term plans
+- **annual_reoptimization** - Annual plan adjustments
+- **dashboard_metrics** - KPIs for dashboard visualization
+
+## Step 5: API Integration
+
+### Updated API Endpoints
+
+All your existing API endpoints will work without changes. The database integration happens transparently in the backend.
+
+### Key Features
+- **Persistent Storage** - All scenarios and plans saved to database
+- **Historical Data** - Access to consumption, emissions, cost history
+- **Better Performance** - Indexed queries for faster data access
+- **Data Integrity** - Foreign key constraints and validation
+- **Audit Trail** - Automatic timestamps and change tracking
+
+## Troubleshooting
+
+### Common Issues
+
+**1. Connection Failed**
+```
+Error: ('08001', '[08001] [Microsoft][ODBC Driver 17 for SQL Server]...)
+```
+- Check server name and port
+- Verify SQL Server is running
+- Check firewall settings
+- Ensure TCP/IP is enabled in SQL Server Configuration Manager
+
+**2. Authentication Failed**
+```
+Error: ('28000', '[28000] [Microsoft][ODBC Driver 17 for SQL Server]...)
+```
+- Verify username and password
+- Check if SQL Server authentication is enabled
+- For Windows auth, ensure user has database access
+
+**3. Database Not Found**
+```
+Error: ('S0002', "[S0002] [Microsoft][ODBC Driver 17 for SQL Server]...")
+```
+- Run the schema creation script first
+- Verify database name spelling
+- Check if user has access to the database
+
+**4. Driver Not Found**
+```
+Error: ('IM002', '[IM002] [Microsoft][ODBC Driver Manager]...)
+```
+- Install ODBC Driver 17 for SQL Server
+- Update driver name in connection string if using different version
+
+### Testing Database Connection
+
+```bash
+# Test basic connectivity
+python -c "
+import pyodbc
+conn = pyodbc.connect('your_connection_string_here')
+print('Connection successful!')
+conn.close()
+"
+```
+
+### Performance Optimization
+
+**For Production:**
+1. **Indexing** - Additional indexes created automatically
+2. **Connection Pooling** - Consider using SQLAlchemy for connection pooling
+3. **Query Optimization** - Review and optimize complex queries
+4. **Backup Strategy** - Implement regular database backups
+
+## Migration from In-Memory to Database
+
+### Backup Existing Data
+If you have existing scenarios or data you want to preserve:
+
+1. **Export current data** (if any) before switching
+2. **Run the database setup**
+3. **Import preserved data** using the repository classes
+
+### Gradual Migration
+You can run both systems in parallel during testing:
+```python
+# For testing - use environment variable to switch
+import os
+if os.getenv('USE_DATABASE', 'false').lower() == 'true':
+    backend = initialize_database_backend()
+else:
+    backend = EcoAssistBackend()  # Original in-memory
+```
+
+## Sample Data Summary
+
+The database comes pre-loaded with:
+
+### Properties (9 properties)
+- **BP01**: Brisbane Plaza (Office, 1,500m², High retrofit potential)
+- **CB01-CB04**: Melbourne buildings (Mixed use, Retail, Office, Industrial)
+- **HA1**: Harbour Apartments (Residential, Sydney)
+- **MP**: Melbourne Plaza (Mixed use)
+- **TC01**: Technology Campus (Educational, Adelaide)
+- **WH1**: Warehouse (Perth)
+
+### Reduction Options (13 options)
+- Solar PV Installation
+- LED Lighting Upgrade
+- HVAC System Upgrade
+- Building Insulation
+- Smart Building Management
+- Carbon Credits Purchase
+- Biofuel Replacement
+- Wind Energy System
+- Heat Pump Installation
+- Energy Storage System
+- Electric Vehicle Fleet
+- Hydrogen Fuel System
+- Green Roof Installation
+
+### Strategic Patterns (5 patterns)
+- Active Installation of RE
+- Replace to Green Fuels
+- Carbon Credit Priority
+- Low Energy Equipment
+- Balanced Strategy
+
+## Support and Maintenance
+
+### Regular Maintenance Tasks
+1. **Weekly**: Index maintenance and statistics updates
+2. **Monthly**: Query performance review
+3. **Quarterly**: Database backup verification
+4. **Annually**: Archive old data (>3 years)
+
+### Monitoring
+- Set up alerts for database growth
+- Monitor query performance
+- Track connection usage
+- Review error logs regularly
+
+## Security Considerations
+
+### Database Security
+- Use strong passwords
+- Enable SSL/TLS encryption
+- Implement least-privilege access
+- Regular security updates
+- Network firewall configuration
+
+### Application Security  
+- Use parameterized queries (implemented)
+- Input validation (implemented)
+- Connection string security
+- Error message sanitization
+
+---
+
+## Quick Start Checklist
+
+- [ ] Install SQL Server 2019+
+- [ ] Install ODBC Driver 17
+- [ ] Run schema creation script
+- [ ] Insert sample data
+- [ ] Install Python dependencies (`pip install pyodbc pandas`)
+- [ ] Update connection settings in `database_integration.py`
+- [ ] Test database connection (`python database_integration.py`)
+- [ ] Update your API code to use database backend
+- [ ] Verify API endpoints work with database
+- [ ] Set up backup strategy
+
+**Estimated Setup Time:** 30-60 minutes
+
+**Contact:** For technical support, refer to your system administrator or database team.
