@@ -245,7 +245,7 @@ app.include_router(
 # MODULE 3: LONG-TERM PLANNING APIs (Inline Implementation)
 # =============================================================================
 
-from fastapi import APIRouter, Depends, BackgroundTasks, Query, Path
+from fastapi import APIRouter, Depends, BackgroundTasks, Query, Path, Body
 from pydantic import BaseModel, Field, validator
 from typing import List, Dict, Optional, Any
 
@@ -480,10 +480,8 @@ async def get_long_term_plan_visualization(
 @planning_router.post("/long-term/register", response_model=APIResponse)
 @measure_execution_time
 async def register_long_term_plan(
-    pattern_id: str = Field(...),
-    approval_status: str = Field(...),
-    plan_name: str = Field(...),
-    notes: Optional[str] = None,
+    plan: LongTermPlanRequest,
+    pattern_id: str = Body(...),  # Add Body(...)
     current_user: TokenData = Depends(get_current_user),
     _: bool = Depends(check_rate_limit_dependency)
 ):

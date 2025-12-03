@@ -656,6 +656,9 @@ def create_error_response(
 
 def measure_execution_time(func):
     """Decorator to measure and log execution time"""
+    from functools import wraps
+    
+    @wraps(func)
     async def wrapper(*args, **kwargs):
         start_time = time.time()
         result = await func(*args, **kwargs)
