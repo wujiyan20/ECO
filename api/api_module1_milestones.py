@@ -130,7 +130,7 @@ class MilestoneCalculationRequest(BaseModel):
         return v
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "base_year": 2024,
                 "mid_term_target_year": 2030,

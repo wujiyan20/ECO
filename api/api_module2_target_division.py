@@ -119,7 +119,7 @@ class TargetDivisionRequest(BaseModel):
         return v
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "scenario_id": "a1b2c3d4-e5f6-4a5b-6c7d-8e9f0a1b2c3d",
                 "target_years": [2025, 2030, 2050],

@@ -2,13 +2,13 @@
 # EcoAssist AI REST API Layer - Complete Integration
 # Version 2.0 - Comprehensive implementation
 
-from fastapi import FastAPI, Request, Response, status
+from fastapi import FastAPI, Request, Response, status, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from api_core import (
     API_VERSION,
@@ -40,6 +40,10 @@ async def lifespan(app: FastAPI):
     logger.info("EcoAssist AI REST API Starting...")
     logger.info(f"API Version: {API_VERSION}")
     logger.info(f"Base URL: {BASE_URL}")
+    logger.info("=" * 80)
+    logger.info("📚 API Documentation:")
+    logger.info(f"   Swagger UI: http://localhost:8000{BASE_URL}/docs")
+    logger.info(f"   ReDoc:      http://localhost:8000{BASE_URL}/redoc")
     logger.info("=" * 80)
     
     # Initialize backend services

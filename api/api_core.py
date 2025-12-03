@@ -78,6 +78,48 @@ class DataType(str, Enum):
     ACTUAL_COSTS = "actual_costs"
     PERFORMANCE_METRICS = "performance_metrics"
 
+class TokenData(BaseModel):
+    """Token payload data"""
+    user_id: str
+    email: str
+    role: str = "user"
+    permissions: List[str] = Field(default_factory=list)
+
+def verify_token(token: str) -> TokenData:
+    """
+    Verify JWT token and extract user data
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("user_id")
+        email = payload.get("email", "")
+        role = payload.get("role", "user")
+        permissions = payload.get("permissions", [])
+        
+        if user_id is None:
+            raise ValueError("Invalid token: missing user_id")
+        
+        return TokenData(
+            user_id=user_id,
+            email=email,
+            role=role,
+            permissions=permissions
+        )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token has expired")
+    except jwt.JWTError:
+        raise HTTPException(status_code=401, detail="Could not validate token")
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())
+) -> TokenData:
+    """
+    Dependency to get current authenticated user from token
+    """
+    token = credentials.credentials
+    return verify_token(token)
+
+
 # API Configuration Constants
 API_VERSION = "v1"
 BASE_URL = f"/api/{API_VERSION}"
@@ -116,7 +158,7 @@ class APIResponse(BaseModel):
     )
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "status_code": 200,
                 "status_message": "Success",
@@ -144,7 +186,7 @@ class ErrorResponse(BaseModel):
     error: ErrorDetail = Field(description="Error details")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "status_code": 400,
                 "status_message": "Bad Request",
@@ -156,6 +198,46 @@ class ErrorResponse(BaseModel):
                 }
             }
         }
+
+
+class AuthenticationRequest(BaseModel):
+    """Authentication request model"""
+    username: str = Field(description="Username or email")
+    password: str = Field(description="User password")
+
+class AuthenticationResponse(BaseModel):
+    """Authentication response model"""
+    access_token: str = Field(description="JWT access token")
+    token_type: str = Field(default="Bearer")
+    expires_in: int = Field(description="Token expiry time in seconds")
+    refresh_token: Optional[str] = Field(None, description="Refresh token")
+    user_info: Dict[str, Any] = Field(description="User information")
+
+# Additional sub-models for API responses
+class ImplementationTiming(BaseModel):
+    """Implementation timing details"""
+    year: int
+    quarter: Optional[int] = None
+
+class ConsumptionImpact(BaseModel):
+    """Consumption impact details"""
+    reduction_kwh: float
+    reduction_percentage: float
+
+class EmissionReduction(BaseModel):
+    """Emission reduction details"""
+    scope1_reduction: float
+    scope2_reduction: float
+    total_reduction: float
+    unit: str = "kg-CO2e"
+
+class CostDetails(BaseModel):
+    """Cost breakdown details"""
+    capex: float
+    opex: float
+    total: float
+    unit: str = "USD"
+
 
 # =============================================================================
 # COMMON REQUEST/RESPONSE SUB-MODELS
