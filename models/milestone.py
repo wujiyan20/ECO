@@ -32,7 +32,7 @@ class MilestoneTarget(BaseModel):
     """
     Single milestone target for a specific year
     """
-    target_id: str
+    target_id: str = ""
     property_id: Optional[str] = None
     year: int = 0
     
@@ -86,8 +86,8 @@ class MilestoneScenario(AuditableModel):
     """
     Complete milestone scenario with yearly targets
     """
-    scenario_id: str
-    scenario_name: str
+    scenario_id: str = ""
+    scenario_name: str = ""
     description: Optional[str] = None
     scenario_type: ScenarioType = ScenarioType.STANDARD
     
@@ -356,14 +356,14 @@ class MilestoneAlert:
     """
     Alert for milestone tracking issues
     """
-    alert_id: str
-    scenario_id: str
+    alert_id: str = ""
+    scenario_id: str = ""
     property_id: Optional[str] = None
-    alert_type: str  # "variance", "risk", "delay"
-    severity: str  # "info", "warning", "critical"
+    alert_type: str = ""  # "variance", "risk", "delay"
+    severity: str = ""  # "info", "warning", "critical"
     
-    title: str
-    description: str
+    title: str = ""
+    description: str = ""
     detected_date: datetime = field(default_factory=datetime.now)
     
     # Metrics

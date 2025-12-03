@@ -17,6 +17,19 @@ from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime
 from dataclasses import dataclass
 
+from models.property import (
+    Property,
+    Portfolio,
+    PropertyFilter,
+    PropertyEmissionBreakdown,
+    PropertyMetrics
+)
+from models.enums import (
+    BuildingType,
+    RetrofitPotential,
+    PropertyStatus
+)
+
 from .base_service import (
     BaseService,
     ServiceResult,
@@ -26,6 +39,8 @@ from .base_service import (
     transaction,
     retry
 )
+
+from models.base import BaseModel, AuditableModel
 
 # Import models (adjust path as needed)
 try:

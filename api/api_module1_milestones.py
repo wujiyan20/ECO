@@ -8,6 +8,15 @@ from typing import List, Dict, Optional, Any
 from datetime import datetime
 import uuid
 import logging
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+from services import (
+    MilestoneService,
+    MilestoneCalculationRequest as ServiceMilestoneRequest,
+    ServiceResult
+)
 
 from api_core import (
     APIResponse,
@@ -33,6 +42,8 @@ from api_core import (
     validate_percentage,
     TokenData
 )
+
+milestone_service = MilestoneService(db_manager=None)  # None = mock mode
 
 logger = logging.getLogger(__name__)
 

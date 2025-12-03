@@ -32,8 +32,8 @@ class ReductionOption(AuditableModel):
     """
     Specific reduction measure or technology option
     """
-    option_id: str
-    name: str
+    option_id: str = ""
+    name: str = ""
     description: Optional[str] = None
     strategy_type: StrategyType = StrategyType.ENERGY_EFFICIENCY
     
@@ -158,8 +158,8 @@ class ReductionStrategy(BaseModel):
     """
     Collection of reduction options forming a strategy
     """
-    strategy_id: str
-    name: str
+    strategy_id: str = ""
+    name: str = ""
     description: Optional[str] = None
     strategy_type: StrategyType = StrategyType.ENERGY_EFFICIENCY
     
@@ -211,14 +211,14 @@ class ImplementationPhase:
     """
     Phase in implementation timeline
     """
-    phase_id: str
-    phase_number: int
-    name: str
+    phase_id: str = ""
+    phase_number: int = 0
+    name: str = ""
     description: Optional[str] = None
     
     # Timeline
-    start_date: datetime
-    end_date: datetime
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
     duration_months: int = 0
     
     # Options in this phase
@@ -242,14 +242,14 @@ class ImplementationPlan(AuditableModel):
     """
     Complete implementation plan with phased rollout
     """
-    plan_id: str
-    name: str
+    plan_id: str = ""
+    name: str = ""
     description: Optional[str] = None
-    scenario_id: str
+    scenario_id: str = ""
     
     # Timeline
-    start_date: datetime
-    end_date: datetime
+    start_date: Optional[datetime] = None 
+    end_date: Optional[datetime] = None
     
     # Phases
     phases: List[ImplementationPhase] = field(default_factory=list)

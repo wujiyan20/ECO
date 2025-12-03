@@ -81,7 +81,7 @@ from .enums import (
 from .base import (
     # Base Classes
     BaseModel,
-    TimestampedModel,
+    #TimestampedModel,
     AuditableModel,
     
     # ID Generation

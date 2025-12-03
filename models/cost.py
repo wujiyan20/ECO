@@ -27,8 +27,8 @@ class CostProjection(BaseModel):
     """
     Cost projection for a specific year or period
     """
-    projection_id: str
-    year: int
+    projection_id: str = ""
+    year: int = 0
     property_id: Optional[str] = None
     scenario_id: Optional[str] = None
     
@@ -142,13 +142,13 @@ class CostSchedule(BaseModel):
     """
     Multi-year cost schedule
     """
-    schedule_id: str
-    name: str
-    scenario_id: str
+    schedule_id: str = ""
+    name: str = ""
+    scenario_id: str = ""
     
     # Time period
-    start_year: int
-    end_year: int
+    start_year: int = 0
+    end_year: int = 0
     
     # Yearly projections
     yearly_costs: Dict[int, CostProjection] = field(default_factory=dict)
@@ -188,8 +188,8 @@ class ROICalculation(BaseModel):
     """
     Return on Investment calculation
     """
-    calculation_id: str
-    name: str
+    calculation_id: str = ""
+    name: str  = ""
     
     # Investment
     initial_investment: float = 0.0
@@ -238,8 +238,8 @@ class NPVCalculation(BaseModel):
     """
     Net Present Value calculation
     """
-    calculation_id: str
-    name: str
+    calculation_id: str = ""
+    name: str = ""
     
     # Cash flows
     initial_investment: float = 0.0  # Negative value

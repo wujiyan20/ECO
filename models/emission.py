@@ -34,7 +34,7 @@ class BaselineDataRecord(BaseModel):
     Single year of baseline emission data
     Used for establishing historical emission patterns
     """
-    year: int
+    year: int = 0
     property_id: Optional[str] = None
     
     # Emission data

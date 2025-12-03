@@ -61,13 +61,30 @@ class BaseModel(ABC):
     Abstract base class for all data models in EcoAssist system.
     Provides common fields and functionality.
     """
-    id: str = field(default_factory=generate_uuid)
-    created_at: datetime = field(default_factory=datetime.now)
-    updated_at: datetime = field(default_factory=datetime.now)
-    created_by: Optional[str] = None
-    updated_by: Optional[str] = None
-    is_active: bool = True
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    id: str = field(default_factory=generate_uuid, init=False)
+    created_at: datetime = field(default_factory=datetime.now, init=False)
+    updated_at: datetime = field(default_factory=datetime.now, init=False)
+    created_by: Optional[str] = field(default=None, init=False)
+    updated_by: Optional[str] = field(default=None, init=False)
+    is_active: bool = field(default=True, init=False)
+    metadata: Dict[str, Any] = field(default_factory=dict, init=False)
+    
+    def __post_init__(self):
+        """Initialize base fields if not already set"""
+        if not hasattr(self, 'id') or not self.id:
+            self.id = generate_uuid()
+        if not hasattr(self, 'created_at'):
+            self.created_at = datetime.now()
+        if not hasattr(self, 'updated_at'):
+            self.updated_at = datetime.now()
+        if not hasattr(self, 'created_by'):
+            self.created_by = None
+        if not hasattr(self, 'updated_by'):
+            self.updated_by = None
+        if not hasattr(self, 'is_active'):
+            self.is_active = True
+        if not hasattr(self, 'metadata'):
+            self.metadata = {}
     
     def to_dict(self) -> Dict[str, Any]:
         """
@@ -159,6 +176,38 @@ class BaseModel(ABC):
         class_name = self.__class__.__name__
         return f"{class_name}(id={self.id[:8]}...)"
 
+
+@dataclass
+class AuditableModel(BaseModel):
+    """
+    Extended base model with full audit trail.
+    Adds versioning and change tracking capabilities.
+    """
+    version: int = field(default=1, init=False)
+    last_modified_by: Optional[str] = field(default=None, init=False)
+    last_modified_at: Optional[datetime] = field(default=None, init=False)
+    change_notes: Optional[str] = field(default=None, init=False)
+    
+    def __post_init__(self):
+        """Initialize audit fields"""
+        super().__post_init__()
+        if not hasattr(self, 'version'):
+            self.version = 1
+        if not hasattr(self, 'last_modified_by'):
+            self.last_modified_by = None
+        if not hasattr(self, 'last_modified_at'):
+            self.last_modified_at = None
+        if not hasattr(self, 'change_notes'):
+            self.change_notes = None
+    
+    def increment_version(self, user: Optional[str] = None, notes: Optional[str] = None):
+        """Increment version and update audit fields"""
+        self.version += 1
+        self.last_modified_by = user
+        self.last_modified_at = datetime.now()
+        self.change_notes = notes
+        self.update_timestamp(user)
+
 # =============================================================================
 # VALIDATION UTILITIES
 # =============================================================================
@@ -200,6 +249,43 @@ def validate_list_not_empty(value: List[Any], field_name: str) -> None:
     """Validate that list is not empty"""
     if not value or len(value) == 0:
         raise ValidationError([f"{field_name} cannot be empty"])
+        
+def validate_positive_number(value: float, field_name: str) -> None:
+    """Validate that a number is positive (alias for validate_positive)"""
+    validate_positive(value, field_name)
+
+def calculate_carbon_intensity(total_emissions: float, area_sqm: float) -> float:
+    """
+    Calculate carbon intensity (kg-CO2e per square meter)
+    
+    Args:
+        total_emissions: Total emissions in kg-CO2e
+        area_sqm: Area in square meters
+        
+    Returns:
+        Carbon intensity in kg-CO2e per sqm
+    """
+    return safe_divide(total_emissions, area_sqm, 0.0)
+
+def calculate_percentage_change(old_value: float, new_value: float) -> float:
+    """
+    Calculate percentage change between two values.
+    
+    Args:
+        old_value: Original value
+        new_value: New value
+        
+    Returns:
+        Percentage change (positive = increase, negative = decrease)
+        Returns 0.0 if old_value is 0
+        
+    Example:
+        calculate_percentage_change(100, 120) -> 20.0
+        calculate_percentage_change(100, 80) -> -20.0
+    """
+    if old_value == 0:
+        return 0.0
+    return ((new_value - old_value) / old_value) * 100
 
 # =============================================================================
 # DATETIME UTILITIES
@@ -226,12 +312,148 @@ def safe_divide(numerator: float, denominator: float, default: float = 0.0) -> f
 def calculate_percentage(part: float, total: float) -> float:
     """Calculate percentage with safe division"""
     return safe_divide(part, total, 0.0) * 100
+    
+
+# =============================================================================
+# ADDITIONAL DATE/TIME UTILITIES
+# =============================================================================
+
+def get_current_year() -> int:
+    """Get current year"""
+    return datetime.now().year
+
+def get_financial_year(date: Optional[datetime] = None) -> int:
+    """
+    Get Australian financial year (July 1 - June 30)
+    
+    Args:
+        date: Date to check (default: today)
+        
+    Returns:
+        Financial year (e.g., 2024 for FY 2024-25)
+    """
+    if date is None:
+        date = datetime.now()
+    
+    if date.month >= 7:  # July onwards is next FY
+        return date.year
+    else:
+        return date.year - 1
+
+def get_date_range_for_year(year: int) -> tuple[datetime, datetime]:
+    """Get start and end dates for a calendar year"""
+    start = datetime(year, 1, 1)
+    end = datetime(year, 12, 31, 23, 59, 59)
+    return start, end
+
+def days_between(start: datetime, end: datetime) -> int:
+    """Calculate days between two dates"""
+    return (end - start).days
+
+def add_years(date: datetime, years: int) -> datetime:
+    """Add years to a date"""
+    try:
+        return date.replace(year=date.year + years)
+    except ValueError:
+        # Handle leap year edge case (Feb 29)
+        return date.replace(year=date.year + years, day=28)
+
+# =============================================================================
+# ADDITIONAL ID GENERATION
+# =============================================================================
+
+def generate_milestone_id(prefix: str = "MILE") -> str:
+    """Generate milestone ID with prefix"""
+    return f"{prefix}-{uuid.uuid4().hex[:8].upper()}"
+
+def generate_hash(text: str) -> str:
+    """Generate MD5 hash of text"""
+    import hashlib
+    return hashlib.md5(text.encode()).hexdigest()
+
+# =============================================================================
+# ADDITIONAL VALIDATION UTILITIES
+# =============================================================================
+
+def validate_uuid(value: str, field_name: str) -> None:
+    """Validate UUID format"""
+    if not is_valid_uuid(value):
+        raise ValidationError([f"{field_name} must be a valid UUID, got {value}"])
+
+def validate_email(email: str, field_name: str = "Email") -> None:
+    """Basic email validation"""
+    import re
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(pattern, email):
+        raise ValidationError([f"{field_name} must be a valid email address"])
+
+# =============================================================================
+# CONVERSION UTILITIES
+# =============================================================================
+
+def convert_to_tonnes(kg: float) -> float:
+    """Convert kg to tonnes"""
+    return kg / 1000.0
+
+def convert_area(value: float, from_unit: str, to_unit: str) -> float:
+    """
+    Convert area between units
+    
+    Args:
+        value: Area value
+        from_unit: Source unit ('sqm', 'sqft', 'acres', 'hectares')
+        to_unit: Target unit
+        
+    Returns:
+        Converted value
+    """
+    # Conversion factors to square meters
+    to_sqm = {
+        'sqm': 1.0,
+        'sqft': 0.092903,
+        'acres': 4046.86,
+        'hectares': 10000.0
+    }
+    
+    if from_unit not in to_sqm or to_unit not in to_sqm:
+        raise ValueError(f"Invalid units: {from_unit} or {to_unit}")
+    
+    # Convert to sqm first, then to target unit
+    sqm = value * to_sqm[from_unit]
+    return sqm / to_sqm[to_unit]
+
+def round_to_decimals(value: float, decimals: int = 2) -> float:
+    """Round to specified decimal places"""
+    return round(value, decimals)
+
+# =============================================================================
+# LOGGING UTILITIES
+# =============================================================================
+
+def log_model_change(model: BaseModel, action: str, user: Optional[str] = None):
+    """Log model changes"""
+    logger.info(
+        f"Model {action}: {model.__class__.__name__} "
+        f"(id={model.id[:8]}..., user={user or 'system'})"
+    )
+
+def log_validation_error(model: BaseModel, errors: List[str]):
+    """Log validation errors"""
+    logger.error(
+        f"Validation failed for {model.__class__.__name__} "
+        f"(id={model.id[:8]}...): {', '.join(errors)}"
+    )
 
 __all__ = [
-    'BaseModel', 'ValidationError', 'generate_uuid', 'is_valid_uuid',
-    'generate_property_id', 'generate_scenario_id', 'generate_plan_id',
-    'generate_calculation_id', 'validate_positive', 'validate_percentage',
-    'validate_year', 'validate_year_range', 'validate_non_empty',
-    'validate_list_not_empty', 'get_current_timestamp', 'get_years_between',
-    'safe_divide', 'calculate_percentage'
+    'BaseModel', 'AuditableModel', 'ValidationError', 
+    'generate_uuid', 'is_valid_uuid', 'generate_property_id', 'generate_scenario_id', 
+    'generate_plan_id', 'generate_calculation_id', 'generate_milestone_id', 'generate_hash',
+    'validate_positive', 'validate_positive_number', 'validate_percentage', 
+    'validate_year', 'validate_year_range', 'validate_non_empty', 'validate_list_not_empty',
+    'validate_uuid', 'validate_email',
+    'get_current_timestamp', 'get_years_between', 'get_current_year', 'get_financial_year',
+    'get_date_range_for_year', 'days_between', 'add_years',
+    'safe_divide', 'calculate_percentage', 'calculate_percentage_change', 'calculate_carbon_intensity',
+    'convert_to_tonnes', 'convert_area', 'round_to_decimals',
+    'log_model_change', 'log_validation_error'
 ]
