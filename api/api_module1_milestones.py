@@ -463,6 +463,156 @@ def generate_scenario_description(
 # API ENDPOINTS
 # =============================================================================
 
+# @router.post("/calculate", response_model=APIResponse)
+# @measure_execution_time
+# async def calculate_milestones(
+    # request: MilestoneCalculationRequest,
+    # background_tasks: BackgroundTasks,
+    # current_user: TokenData = Depends(get_current_user),
+    # _: bool = Depends(check_rate_limit_dependency)
+# ):
+    # """
+    # API 1: Calculate Milestones
+    
+    # Generate multiple milestone scenarios based on reduction targets using AI algorithms.
+    # This API performs calculations only and does NOT persist results to the database.
+    # Calculated scenarios are temporarily cached for preview purposes and must be
+    # explicitly registered via the /milestones/register endpoint.
+    
+    # **Authentication Required:** Bearer Token
+    
+    # **Key Features:**
+    # - AI-optimized reduction pathways using S-curve distribution
+    # - Multiple scenario types (Standard, Aggressive, Conservative)
+    # - Customizable strategy preferences
+    # - Technology learning curve cost projections
+    # - Comprehensive validation of input data
+    
+    # **Business Logic:**
+    # 1. Validates input parameters and baseline data quality
+    # 2. Calculates average baseline emissions from historical data
+    # 3. Generates AI-optimized reduction paths for each scenario type
+    # 4. Projects costs using industry benchmarks and learning curves
+    # 5. Creates strategy breakdowns based on preferences
+    # 6. Returns multiple scenarios for comparison
+    
+    # **Response:** Array of milestone scenarios with:
+    # - Unique scenario IDs for registration
+    # - Annual reduction targets from base to long-term year
+    # - Cost projections with CAPEX/OPEX breakdown
+    # - Strategy distribution (renewable/efficiency/behavioral)
+    # - Calculation metadata for traceability
+    # """
+    # request_id = generate_request_id()
+    
+    # try:
+        # logger.info(
+            # f"Calculating milestones (request_id: {request_id}, "
+            # f"user: {current_user.user_id}, "
+            # f"properties: {len(request.property_ids)})"
+        # )
+        
+        # # Calculate baseline emission
+        # baseline_emission = calculate_baseline_emission(request.baseline_data)
+        # logger.info(f"Baseline emission calculated: {baseline_emission} kg-CO2e")
+        
+        # # Define reduction percentages for different scenario types
+        # reduction_configs = {
+            # ScenarioType.STANDARD: {"mid": 40.0, "long": 80.0},
+            # ScenarioType.AGGRESSIVE: {"mid": 50.0, "long": 90.0},
+            # ScenarioType.CONSERVATIVE: {"mid": 30.0, "long": 70.0}
+        # }
+        
+        # scenarios = []
+        
+        # for scenario_type in request.scenario_types:
+            # logger.info(f"Generating {scenario_type} scenario")
+            
+            # # Get reduction configuration
+            # config = reduction_configs.get(scenario_type, reduction_configs[ScenarioType.STANDARD])
+            
+            # # Generate strategy breakdown
+            # strategy_breakdown = generate_strategy_breakdown(
+                # scenario_type,
+                # request.strategy_preferences
+            # )
+            
+            # # Generate reduction targets
+            # reduction_targets = generate_reduction_path(
+                # baseline_emission,
+                # request.base_year,
+                # request.mid_term_target_year,
+                # request.long_term_target_year,
+                # config["mid"],
+                # config["long"]
+            # )
+            
+            # # Generate cost projections
+            # cost_projections = generate_cost_projections(
+                # reduction_targets,
+                # scenario_type,
+                # strategy_breakdown
+            # )
+            
+            # # Create scenario
+            # scenario = MilestoneScenario(
+                # scenario_id=str(uuid.uuid4()),
+                # scenario_type=scenario_type,
+                # description=generate_scenario_description(scenario_type, strategy_breakdown),
+                # reduction_targets=reduction_targets,
+                # cost_projection=cost_projections,
+                # strategy_breakdown=strategy_breakdown
+            # )
+            
+            # scenarios.append(scenario.dict())
+        
+        # logger.info(f"Generated {len(scenarios)} scenarios successfully")
+        
+        # # Background task to save results
+        # background_tasks.add_task(
+            # save_milestone_calculation,
+            # scenarios,
+            # request_id
+        # )
+        
+        # response_data = {
+            # "scenarios": scenarios,
+            # "calculation_metadata": CalculationMetadata(
+                # calculated_at=datetime.utcnow(),
+                # algorithm_version="2.1.0",
+                # base_year=request.base_year,
+                # target_years=[request.mid_term_target_year, request.long_term_target_year]
+            # ).dict()
+        # }
+        
+        # return create_success_response(
+            # data=response_data,
+            # request_id=request_id,
+            # status_code=200,
+            # message=f"Generated {len(scenarios)} milestone scenarios successfully"
+        # )
+        
+    # except ValueError as e:
+        # logger.error(f"Validation error (request_id: {request_id}): {str(e)}")
+        # return create_error_response(
+            # error_code="VALIDATION_ERROR",
+            # error_message=str(e),
+            # request_id=request_id,
+            # status_code=400
+        # )
+    # except Exception as e:
+        # logger.error(f"Calculation error (request_id: {request_id}): {str(e)}", exc_info=True)
+        # return create_error_response(
+            # error_code="CALCULATION_ERROR",
+            # error_message="Internal server error during milestone calculation",
+            # request_id=request_id,
+            # status_code=500,
+            # details={"error_type": type(e).__name__}
+        # )
+
+# from services.milestone_service import MilestoneCalculationRequest as ServiceRequest
+
+
 @router.post("/calculate", response_model=APIResponse)
 @measure_execution_time
 async def calculate_milestones(
@@ -475,139 +625,107 @@ async def calculate_milestones(
     API 1: Calculate Milestones
     
     Generate multiple milestone scenarios based on reduction targets using AI algorithms.
-    This API performs calculations only and does NOT persist results to the database.
-    Calculated scenarios are temporarily cached for preview purposes and must be
-    explicitly registered via the /milestones/register endpoint.
-    
-    **Authentication Required:** Bearer Token
-    
-    **Key Features:**
-    - AI-optimized reduction pathways using S-curve distribution
-    - Multiple scenario types (Standard, Aggressive, Conservative)
-    - Customizable strategy preferences
-    - Technology learning curve cost projections
-    - Comprehensive validation of input data
-    
-    **Business Logic:**
-    1. Validates input parameters and baseline data quality
-    2. Calculates average baseline emissions from historical data
-    3. Generates AI-optimized reduction paths for each scenario type
-    4. Projects costs using industry benchmarks and learning curves
-    5. Creates strategy breakdowns based on preferences
-    6. Returns multiple scenarios for comparison
-    
-    **Response:** Array of milestone scenarios with:
-    - Unique scenario IDs for registration
-    - Annual reduction targets from base to long-term year
-    - Cost projections with CAPEX/OPEX breakdown
-    - Strategy distribution (renewable/efficiency/behavioral)
-    - Calculation metadata for traceability
     """
     request_id = generate_request_id()
     
     try:
         logger.info(
             f"Calculating milestones (request_id: {request_id}, "
-            f"user: {current_user.user_id}, "
-            f"properties: {len(request.property_ids)})"
+            f"user: {current_user.user_id}, properties: {len(request.property_ids)})"
         )
         
-        # Calculate baseline emission
-        baseline_emission = calculate_baseline_emission(request.baseline_data)
-        logger.info(f"Baseline emission calculated: {baseline_emission} kg-CO2e")
-        
-        # Define reduction percentages for different scenario types
-        reduction_configs = {
-            ScenarioType.STANDARD: {"mid": 40.0, "long": 80.0},
-            ScenarioType.AGGRESSIVE: {"mid": 50.0, "long": 90.0},
-            ScenarioType.CONSERVATIVE: {"mid": 30.0, "long": 70.0}
+
+        # Calculate baseline emission from historical data
+        total_emissions = 0
+        for record in request.baseline_data:
+            total_emissions += record.scope1_emissions + record.scope2_emissions
+        baseline_emission = total_emissions / len(request.baseline_data)
+
+        logger.info(f"Calculated baseline emission: {baseline_emission} kg-CO2e")
+
+        # Create service request with proper types
+        service_data = {
+            "property_ids": request.property_ids,
+            "base_year": int(request.base_year),
+            "mid_term_year": int(request.mid_term_target_year),
+            "long_term_year": int(request.long_term_target_year),
+            "baseline_emission": float(baseline_emission),
+            "baseline_data": [bd.dict() for bd in request.baseline_data],
+            "scenario_types": [st.value if hasattr(st, 'value') else str(st) for st in request.scenario_types],
+            "strategy_preferences": request.strategy_preferences.dict() if request.strategy_preferences else None,
+            "budget_constraints": None,  # ADD THIS
+            "reduction_rate": None  # ADD THIS TOO (may be needed)
         }
-        
-        scenarios = []
-        
-        for scenario_type in request.scenario_types:
-            logger.info(f"Generating {scenario_type} scenario")
-            
-            # Get reduction configuration
-            config = reduction_configs.get(scenario_type, reduction_configs[ScenarioType.STANDARD])
-            
-            # Generate strategy breakdown
-            strategy_breakdown = generate_strategy_breakdown(
-                scenario_type,
-                request.strategy_preferences
+
+        # Create simple object with attributes
+        class ServiceRequest:
+            def __init__(self, data):
+                for key, value in data.items():
+                    setattr(self, key, value)
+
+        service_request = ServiceRequest(service_data)
+
+        # Call service layer
+        result = milestone_service.calculate_milestones(service_request)
+    
+        if not result.is_success:
+            return create_error_response(
+                error_code="CALCULATION_ERROR",
+                error_message=result.message  or "Milestone calculation failed",
+                request_id=request_id,
+                status_code=500
             )
-            
-            # Generate reduction targets
-            reduction_targets = generate_reduction_path(
-                baseline_emission,
-                request.base_year,
-                request.mid_term_target_year,
-                request.long_term_target_year,
-                config["mid"],
-                config["long"]
-            )
-            
-            # Generate cost projections
-            cost_projections = generate_cost_projections(
-                reduction_targets,
-                scenario_type,
-                strategy_breakdown
-            )
-            
-            # Create scenario
-            scenario = MilestoneScenario(
-                scenario_id=str(uuid.uuid4()),
-                scenario_type=scenario_type,
-                description=generate_scenario_description(scenario_type, strategy_breakdown),
-                reduction_targets=reduction_targets,
-                cost_projection=cost_projections,
-                strategy_breakdown=strategy_breakdown
-            )
-            
-            scenarios.append(scenario.dict())
         
-        logger.info(f"Generated {len(scenarios)} scenarios successfully")
-        
-        # Background task to save results
-        background_tasks.add_task(
-            save_milestone_calculation,
-            scenarios,
-            request_id
-        )
-        
+        # Convert service result to API response format
+        scenarios_data = []
+
+        # result.data is a MilestoneCalculationResult object, not a dict
+        # Handle different result.data formats
+        if hasattr(result.data, 'scenarios'):
+            # result.data is an object with scenarios attribute
+            for scenario in result.data.scenarios:
+                if isinstance(scenario, dict):
+                    scenarios_data.append(scenario)
+                elif hasattr(scenario, 'to_dict'):
+                    scenarios_data.append(scenario.to_dict())
+                elif hasattr(scenario, '__dict__'):
+                    scenarios_data.append(scenario.__dict__)
+                else:
+                    scenarios_data.append(scenario)
+        elif isinstance(result.data, list):
+            # result.data is already a list
+            scenarios_data = result.data
+        else:
+            # Unknown format
+            scenarios_data = []
+
         response_data = {
-            "scenarios": scenarios,
-            "calculation_metadata": CalculationMetadata(
-                calculated_at=datetime.utcnow(),
-                algorithm_version="2.1.0",
-                base_year=request.base_year,
-                target_years=[request.mid_term_target_year, request.long_term_target_year]
-            ).dict()
+            "scenarios": scenarios_data,
+            "calculation_metadata": {
+                "calculated_at": datetime.utcnow().isoformat(),
+                "algorithm_version": "2.1.0",
+                "base_year": request.base_year
+            }
         }
+        
+        # Background save
+        if scenarios_data:
+            background_tasks.add_task(save_milestone_calculation, scenarios_data, request_id)
         
         return create_success_response(
             data=response_data,
             request_id=request_id,
             status_code=200,
-            message=f"Generated {len(scenarios)} milestone scenarios successfully"
+            message=f"Successfully calculated {len(scenarios_data)} milestone scenarios"
         )
         
-    except ValueError as e:
-        logger.error(f"Validation error (request_id: {request_id}): {str(e)}")
-        return create_error_response(
-            error_code="VALIDATION_ERROR",
-            error_message=str(e),
-            request_id=request_id,
-            status_code=400
-        )
     except Exception as e:
         logger.error(f"Calculation error (request_id: {request_id}): {str(e)}", exc_info=True)
         return create_error_response(
             error_code="CALCULATION_ERROR",
-            error_message="Internal server error during milestone calculation",
+            error_message="An unexpected error occurred during calculation",
             request_id=request_id,
-            status_code=500,
-            details={"error_type": type(e).__name__}
+            status_code=500
         )
 
 @router.get("/visualization/{scenario_id}", response_model=APIResponse)

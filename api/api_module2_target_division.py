@@ -26,6 +26,15 @@ from api_core import (
     TokenData
 )
 
+from services import (
+    AllocationService,
+    AllocationRequest as ServiceAllocationRequest,
+    ServiceResult
+)
+
+# Initialize allocation service
+allocation_service = AllocationService(db_manager=None)
+
 logger = logging.getLogger(__name__)
 
 # Create router for target division APIs
@@ -442,226 +451,352 @@ def generate_recommended_actions(
 # API ENDPOINTS
 # =============================================================================
 
+# @router.post("/calculate", response_model=APIResponse)
+# @measure_execution_time
+# async def calculate_target_division(
+    # request: TargetDivisionRequest,
+    # background_tasks: BackgroundTasks,
+    # current_user: TokenData = Depends(get_current_user),
+    # _: bool = Depends(check_rate_limit_dependency)
+# ):
+    # """
+    # API 5: Calculate Target Division
+    
+    # Allocate portfolio-level reduction targets to individual properties using
+    # advanced AI algorithms. Supports multiple allocation methods and multi-objective
+    # optimization.
+    
+    # **Authentication Required:** Bearer Token
+    
+    # **Allocation Methods:**
+    # - carbon_intensity_weighted: Prioritizes high-carbon-intensity properties
+    # - proportional: Simple proportional to baseline emissions
+    # - retrofit_potential: Based on retrofit feasibility
+    # - equal_distribution: Equal percentage reduction across all properties
+    # - ai_optimized: Multi-objective optimization balancing fairness, efficiency, feasibility
+    
+    # **Key Features:**
+    # - Multi-objective optimization with configurable weights
+    # - Feasibility assessment for each property
+    # - Cost estimation based on property characteristics
+    # - Recommended action generation
+    # - Allocation quality metrics (fairness, efficiency, coverage)
+    
+    # **Business Logic:**
+    # 1. Validates scenario exists and retrieves portfolio targets
+    # 2. Applies selected allocation algorithm
+    # 3. Calculates per-property targets for each target year
+    # 4. Estimates implementation costs
+    # 5. Generates recommended actions
+    # 6. Calculates allocation quality metrics
+    # 7. Returns detailed allocation for preview
+    
+    # **Response:** Property-level targets with:
+    # - Allocated emission targets per year
+    # - Reduction percentages and absolute amounts
+    # - Feasibility scores
+    # - Cost estimates
+    # - Recommended actions
+    # - Overall allocation metrics
+    # """
+    # request_id = generate_request_id()
+    # allocation_id = str(uuid.uuid4())
+    
+    # try:
+        # logger.info(
+            # f"Calculating target division (request_id: {request_id}, "
+            # f"scenario: {request.scenario_id}, method: {request.allocation_method}, "
+            # f"properties: {len(request.properties)})"
+        # )
+        
+        # # TODO: Retrieve scenario from database and validate
+        # # scenario = await db.milestone_scenarios.find_one({"scenario_id": request.scenario_id})
+        
+        # # Mock portfolio targets (in production, from scenario)
+        # portfolio_targets = {
+            # 2025: 4465.69,  # Total reduction target for 2025
+            # 2030: 2820.75,  # Total reduction target for 2030
+            # 2050: 940.25    # Total reduction target for 2050
+        # }
+        
+        # # Initialize allocation engine
+        # engine = TargetAllocationEngine()
+        
+        # # Select allocation method
+        # allocation_methods = {
+            # AllocationMethod.CARBON_INTENSITY_WEIGHTED: engine.allocate_carbon_intensity_weighted,
+            # AllocationMethod.PROPORTIONAL: engine.allocate_proportional,
+            # AllocationMethod.RETROFIT_POTENTIAL: engine.allocate_retrofit_potential,
+            # AllocationMethod.EQUAL_DISTRIBUTION: engine.allocate_equal_distribution,
+        # }
+        
+        # # Get total baseline for calculating portfolio reduction
+        # total_baseline = sum(p.baseline_emission for p in request.properties)
+        
+        # # Store all property targets
+        # all_property_targets = []
+        
+        # for year in request.target_years:
+            # # Get portfolio target for this year (or interpolate if not exact match)
+            # if year in portfolio_targets:
+                # portfolio_reduction = total_baseline - portfolio_targets[year]
+            # else:
+                # # Interpolate for years not in the scenario
+                # sorted_years = sorted(portfolio_targets.keys())
+                # if year < sorted_years[0]:
+                    # portfolio_reduction = 0
+                # elif year > sorted_years[-1]:
+                    # portfolio_reduction = total_baseline - portfolio_targets[sorted_years[-1]]
+                # else:
+                    # # Linear interpolation
+                    # for i in range(len(sorted_years) - 1):
+                        # if sorted_years[i] < year < sorted_years[i + 1]:
+                            # y1 = portfolio_targets[sorted_years[i]]
+                            # y2 = portfolio_targets[sorted_years[i + 1]]
+                            # x1 = sorted_years[i]
+                            # x2 = sorted_years[i + 1]
+                            # interpolated_target = y1 + (y2 - y1) * (year - x1) / (x2 - x1)
+                            # portfolio_reduction = total_baseline - interpolated_target
+                            # break
+            
+            # # Apply allocation method
+            # if request.allocation_method == AllocationMethod.AI_OPTIMIZED:
+                # objectives = request.optimization_objectives or {
+                    # 'fairness': 0.4,
+                    # 'efficiency': 0.4,
+                    # 'feasibility': 0.2
+                # }
+                # allocations = engine.allocate_ai_optimized(
+                    # request.properties,
+                    # portfolio_reduction,
+                    # objectives
+                # )
+            # else:
+                # allocation_func = allocation_methods.get(request.allocation_method)
+                # allocations = allocation_func(request.properties, portfolio_reduction)
+            
+            # # Calculate metrics for this year's allocation
+            # metrics = calculate_allocation_metrics(request.properties, allocations)
+            
+            # # Create property targets
+            # for prop in request.properties:
+                # allocated_reduction = allocations.get(prop.property_id, 0)
+                # target_emission = prop.baseline_emission - allocated_reduction
+                # reduction_pct = (allocated_reduction / prop.baseline_emission * 100) if prop.baseline_emission > 0 else 0
+                
+                # # Estimate cost (simplified model: $150 per tonne CO2e reduced)
+                # cost_per_tonne = 150
+                # estimated_cost = allocated_reduction * cost_per_tonne
+                
+                # # Generate recommended actions
+                # recommended_actions = generate_recommended_actions(prop, allocated_reduction)
+                
+                # # Calculate allocation weight
+                # total_allocated = sum(allocations.values())
+                # allocation_weight = allocated_reduction / total_allocated if total_allocated > 0 else 0
+                
+                # property_target = PropertyTarget(
+                    # property_id=prop.property_id,
+                    # property_name=prop.property_name,
+                    # year=year,
+                    # allocated_target=round(target_emission, 2),
+                    # reduction_from_baseline=round(reduction_pct, 2),
+                    # absolute_reduction=round(allocated_reduction, 2),
+                    # allocation_weight=round(allocation_weight, 4),
+                    # feasibility_score=prop.retrofit_potential,
+                    # estimated_cost=round(estimated_cost, 2),
+                    # recommended_actions=recommended_actions
+                # )
+                
+                # all_property_targets.append(property_target.dict())
+        
+        # # Calculate overall metrics (using last year's allocation)
+        # final_allocations = {
+            # prop.property_id: next(
+                # pt['absolute_reduction'] for pt in all_property_targets
+                # if pt['property_id'] == prop.property_id and pt['year'] == request.target_years[-1]
+            # )
+            # for prop in request.properties
+        # }
+        # overall_metrics = calculate_allocation_metrics(request.properties, final_allocations)
+        
+        # logger.info(
+            # f"Target division calculated successfully (allocation_id: {allocation_id}, "
+            # f"fairness: {overall_metrics.fairness_index})"
+        # )
+        
+        # response_data = {
+            # "allocation_id": allocation_id,
+            # "scenario_id": request.scenario_id,
+            # "allocation_method": request.allocation_method.value,
+            # "property_targets": all_property_targets,
+            # "allocation_metrics": overall_metrics.dict(),
+            # "summary": {
+                # "total_properties": len(request.properties),
+                # "target_years": request.target_years,
+                # "total_baseline_emission": round(total_baseline, 2),
+                # "total_allocated_reduction": round(sum(final_allocations.values()), 2),
+                # "average_reduction_percentage": round(
+                    # np.mean([pt['reduction_from_baseline'] for pt in all_property_targets]),
+                    # 2
+                # )
+            # },
+            # "calculation_metadata": {
+                # "calculated_at": datetime.utcnow().isoformat(),
+                # "algorithm_version": "2.1.0",
+                # "user_id": current_user.user_id
+            # }
+        # }
+        
+        # # Background task to cache results
+        # # background_tasks.add_task(cache_allocation_results, allocation_id, response_data)
+        
+        # return create_success_response(
+            # data=response_data,
+            # request_id=request_id,
+            # status_code=200,
+            # message=f"Target division calculated successfully for {len(request.properties)} properties"
+        # )
+        
+    # except ValueError as e:
+        # logger.error(f"Validation error (request_id: {request_id}): {str(e)}")
+        # return create_error_response(
+            # error_code="VALIDATION_ERROR",
+            # error_message=str(e),
+            # request_id=request_id,
+            # status_code=400
+        # )
+    # except Exception as e:
+        # logger.error(f"Calculation error (request_id: {request_id}): {str(e)}", exc_info=True)
+        # return create_error_response(
+            # error_code="ALLOCATION_ERROR",
+            # error_message="Error during target division calculation",
+            # request_id=request_id,
+            # status_code=500
+        # )
+        
 @router.post("/calculate", response_model=APIResponse)
 @measure_execution_time
-async def calculate_target_division(
-    request: TargetDivisionRequest,
+async def calculate_target_allocation(
+    request: ServiceAllocationRequest,
     background_tasks: BackgroundTasks,
     current_user: TokenData = Depends(get_current_user),
     _: bool = Depends(check_rate_limit_dependency)
 ):
-    """
-    API 5: Calculate Target Division
-    
-    Allocate portfolio-level reduction targets to individual properties using
-    advanced AI algorithms. Supports multiple allocation methods and multi-objective
-    optimization.
-    
-    **Authentication Required:** Bearer Token
-    
-    **Allocation Methods:**
-    - carbon_intensity_weighted: Prioritizes high-carbon-intensity properties
-    - proportional: Simple proportional to baseline emissions
-    - retrofit_potential: Based on retrofit feasibility
-    - equal_distribution: Equal percentage reduction across all properties
-    - ai_optimized: Multi-objective optimization balancing fairness, efficiency, feasibility
-    
-    **Key Features:**
-    - Multi-objective optimization with configurable weights
-    - Feasibility assessment for each property
-    - Cost estimation based on property characteristics
-    - Recommended action generation
-    - Allocation quality metrics (fairness, efficiency, coverage)
-    
-    **Business Logic:**
-    1. Validates scenario exists and retrieves portfolio targets
-    2. Applies selected allocation algorithm
-    3. Calculates per-property targets for each target year
-    4. Estimates implementation costs
-    5. Generates recommended actions
-    6. Calculates allocation quality metrics
-    7. Returns detailed allocation for preview
-    
-    **Response:** Property-level targets with:
-    - Allocated emission targets per year
-    - Reduction percentages and absolute amounts
-    - Feasibility scores
-    - Cost estimates
-    - Recommended actions
-    - Overall allocation metrics
-    """
+    """API 5: Calculate Target Allocation"""
     request_id = generate_request_id()
-    allocation_id = str(uuid.uuid4())
     
     try:
         logger.info(
-            f"Calculating target division (request_id: {request_id}, "
-            f"scenario: {request.scenario_id}, method: {request.allocation_method}, "
-            f"properties: {len(request.properties)})"
+            f"Calculating target allocation (request_id: {request_id}, "
+            f"scenario_id: {request.scenario_id}, properties: {len(request.property_ids)})"
         )
         
-        # TODO: Retrieve scenario from database and validate
-        # scenario = await db.milestone_scenarios.find_one({"scenario_id": request.scenario_id})
-        
-        # Mock portfolio targets (in production, from scenario)
-        portfolio_targets = {
-            2025: 4465.69,  # Total reduction target for 2025
-            2030: 2820.75,  # Total reduction target for 2030
-            2050: 940.25    # Total reduction target for 2050
+        method_mapping = {
+            "PROPORTIONAL_BASELINE": "PROPORTIONAL",
+            "EQUAL_DISTRIBUTION": "EQUAL",
+            "CAPACITY_BASED": "RETROFIT_POTENTIAL",
+            "COST_OPTIMIZED": "AI_OPTIMIZED",
+            "INTENSITY_WEIGHTED": "INTENSITY_WEIGHTED"
         }
+
+        api_method = request.allocation_method.value if hasattr(request.allocation_method, 'value') else str(request.allocation_method)
+        service_method = method_mapping.get(api_method, api_method)
+
+        logger.info(f"Mapping allocation method: {api_method} -> {service_method}")
         
-        # Initialize allocation engine
-        engine = TargetAllocationEngine()
+        # Create service request
+        service_request = ServiceAllocationRequest(
+            scenario_id=request.scenario_id,
+            property_ids=request.property_ids,
+            total_reduction_target=request.total_reduction_target,
+            allocation_method=service_method,  # Use mapped method
+            constraints={
+                "min_reduction": request.constraints.get("min_reduction_per_property") if request.constraints else None,
+                "max_reduction": request.constraints.get("max_reduction_per_property") if request.constraints else None,
+                "budget_limit": request.constraints.get("total_budget_limit") if request.constraints else None
+            } if request.constraints else None
+        )
         
-        # Select allocation method
-        allocation_methods = {
-            AllocationMethod.CARBON_INTENSITY_WEIGHTED: engine.allocate_carbon_intensity_weighted,
-            AllocationMethod.PROPORTIONAL: engine.allocate_proportional,
-            AllocationMethod.RETROFIT_POTENTIAL: engine.allocate_retrofit_potential,
-            AllocationMethod.EQUAL_DISTRIBUTION: engine.allocate_equal_distribution,
-        }
+        # Call service layer
+        result = allocation_service.allocate_targets(service_request)
         
-        # Get total baseline for calculating portfolio reduction
-        total_baseline = sum(p.baseline_emission for p in request.properties)
+        # ADD DEBUGGING HERE
+        logger.info(f"Service call completed: is_success={result.is_success}")
+        logger.info(f"Service result message: {result.message}")
+        logger.info(f"Service result status: {result.status}")
+
+        # ADD THIS - Check for error details
+        if hasattr(result, 'error_details'):
+            logger.error(f"Validation errors: {result.error_details}")
+        if hasattr(result, 'errors'):
+            logger.error(f"Errors list: {result.errors}")
+
+        # Also log what we sent to the service
+        logger.info(f"Service request - scenario_id: {service_request.scenario_id}")
+        logger.info(f"Service request - property_ids: {service_request.property_ids}")
+        logger.info(f"Service request - total_reduction_target: {service_request.total_reduction_target}")
+        logger.info(f"Service request - allocation_method: {service_request.allocation_method}")
+        logger.info(f"Service request - constraints: {service_request.constraints}")
         
-        # Store all property targets
-        all_property_targets = []
-        
-        for year in request.target_years:
-            # Get portfolio target for this year (or interpolate if not exact match)
-            if year in portfolio_targets:
-                portfolio_reduction = total_baseline - portfolio_targets[year]
-            else:
-                # Interpolate for years not in the scenario
-                sorted_years = sorted(portfolio_targets.keys())
-                if year < sorted_years[0]:
-                    portfolio_reduction = 0
-                elif year > sorted_years[-1]:
-                    portfolio_reduction = total_baseline - portfolio_targets[sorted_years[-1]]
-                else:
-                    # Linear interpolation
-                    for i in range(len(sorted_years) - 1):
-                        if sorted_years[i] < year < sorted_years[i + 1]:
-                            y1 = portfolio_targets[sorted_years[i]]
-                            y2 = portfolio_targets[sorted_years[i + 1]]
-                            x1 = sorted_years[i]
-                            x2 = sorted_years[i + 1]
-                            interpolated_target = y1 + (y2 - y1) * (year - x1) / (x2 - x1)
-                            portfolio_reduction = total_baseline - interpolated_target
-                            break
-            
-            # Apply allocation method
-            if request.allocation_method == AllocationMethod.AI_OPTIMIZED:
-                objectives = request.optimization_objectives or {
-                    'fairness': 0.4,
-                    'efficiency': 0.4,
-                    'feasibility': 0.2
-                }
-                allocations = engine.allocate_ai_optimized(
-                    request.properties,
-                    portfolio_reduction,
-                    objectives
-                )
-            else:
-                allocation_func = allocation_methods.get(request.allocation_method)
-                allocations = allocation_func(request.properties, portfolio_reduction)
-            
-            # Calculate metrics for this year's allocation
-            metrics = calculate_allocation_metrics(request.properties, allocations)
-            
-            # Create property targets
-            for prop in request.properties:
-                allocated_reduction = allocations.get(prop.property_id, 0)
-                target_emission = prop.baseline_emission - allocated_reduction
-                reduction_pct = (allocated_reduction / prop.baseline_emission * 100) if prop.baseline_emission > 0 else 0
-                
-                # Estimate cost (simplified model: $150 per tonne CO2e reduced)
-                cost_per_tonne = 150
-                estimated_cost = allocated_reduction * cost_per_tonne
-                
-                # Generate recommended actions
-                recommended_actions = generate_recommended_actions(prop, allocated_reduction)
-                
-                # Calculate allocation weight
-                total_allocated = sum(allocations.values())
-                allocation_weight = allocated_reduction / total_allocated if total_allocated > 0 else 0
-                
-                property_target = PropertyTarget(
-                    property_id=prop.property_id,
-                    property_name=prop.property_name,
-                    year=year,
-                    allocated_target=round(target_emission, 2),
-                    reduction_from_baseline=round(reduction_pct, 2),
-                    absolute_reduction=round(allocated_reduction, 2),
-                    allocation_weight=round(allocation_weight, 4),
-                    feasibility_score=prop.retrofit_potential,
-                    estimated_cost=round(estimated_cost, 2),
-                    recommended_actions=recommended_actions
-                )
-                
-                all_property_targets.append(property_target.dict())
-        
-        # Calculate overall metrics (using last year's allocation)
-        final_allocations = {
-            prop.property_id: next(
-                pt['absolute_reduction'] for pt in all_property_targets
-                if pt['property_id'] == prop.property_id and pt['year'] == request.target_years[-1]
+        if not result.is_success:
+            return create_error_response(
+                error_code="ALLOCATION_ERROR",
+                error_message=result.message or "Target allocation failed",
+                request_id=request_id,
+                status_code=500
             )
-            for prop in request.properties
-        }
-        overall_metrics = calculate_allocation_metrics(request.properties, final_allocations)
         
-        logger.info(
-            f"Target division calculated successfully (allocation_id: {allocation_id}, "
-            f"fairness: {overall_metrics.fairness_index})"
+        # Convert service result to API response
+        allocations_data = []
+        if hasattr(result.data, 'allocations'):
+            for allocation in result.data.allocations:
+                alloc_dict = allocation.to_dict() if hasattr(allocation, 'to_dict') else (
+                    allocation.__dict__ if hasattr(allocation, '__dict__') else allocation
+                )
+                allocations_data.append(alloc_dict)
+        elif isinstance(result.data, list):
+            allocations_data = result.data
+        
+        # Calculate summary
+        total_allocated = sum(
+            a.get("allocated_2030_target", 0) + a.get("allocated_2050_target", 0) 
+            for a in allocations_data
         )
         
         response_data = {
-            "allocation_id": allocation_id,
-            "scenario_id": request.scenario_id,
-            "allocation_method": request.allocation_method.value,
-            "property_targets": all_property_targets,
-            "allocation_metrics": overall_metrics.dict(),
-            "summary": {
-                "total_properties": len(request.properties),
-                "target_years": request.target_years,
-                "total_baseline_emission": round(total_baseline, 2),
-                "total_allocated_reduction": round(sum(final_allocations.values()), 2),
-                "average_reduction_percentage": round(
-                    np.mean([pt['reduction_from_baseline'] for pt in all_property_targets]),
-                    2
-                )
-            },
-            "calculation_metadata": {
-                "calculated_at": datetime.utcnow().isoformat(),
-                "algorithm_version": "2.1.0",
-                "user_id": current_user.user_id
+            "allocations": allocations_data,
+            "allocation_summary": {
+                "total_properties": len(allocations_data),
+                "allocation_method": api_method,  # Use the api_method variable we created earlier
+                "total_allocated_2030": sum(a.get("allocated_2030_target", 0) for a in allocations_data),
+                "total_allocated_2050": sum(a.get("allocated_2050_target", 0) for a in allocations_data),
+                "total_allocated": total_allocated
             }
         }
         
-        # Background task to cache results
-        # background_tasks.add_task(cache_allocation_results, allocation_id, response_data)
+        # Background task
+        if allocations_data:
+            background_tasks.add_task(
+                save_allocation_results,
+                allocations_data,
+                request_id
+            )
         
         return create_success_response(
             data=response_data,
             request_id=request_id,
             status_code=200,
-            message=f"Target division calculated successfully for {len(request.properties)} properties"
+            message=f"Successfully allocated targets to {len(allocations_data)} properties"
         )
         
-    except ValueError as e:
-        logger.error(f"Validation error (request_id: {request_id}): {str(e)}")
-        return create_error_response(
-            error_code="VALIDATION_ERROR",
-            error_message=str(e),
-            request_id=request_id,
-            status_code=400
-        )
     except Exception as e:
-        logger.error(f"Calculation error (request_id: {request_id}): {str(e)}", exc_info=True)
+        logger.error(f"Allocation error (request_id: {request_id}): {str(e)}", exc_info=True)
+        logger.error(f"Exception type: {type(e).__name__}")
+        logger.error(f"Exception details: {repr(e)}")
         return create_error_response(
             error_code="ALLOCATION_ERROR",
-            error_message="Error during target division calculation",
+            error_message=f"Allocation failed: {str(e)}",  # Include actual error
             request_id=request_id,
             status_code=500
         )
