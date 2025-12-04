@@ -74,6 +74,10 @@ from .enums import (
     RETROFIT_POTENTIAL_MAP
 )
 
+
+from .planning import *
+from .reoptimization import *
+
 # =============================================================================
 # BASE CLASSES
 # =============================================================================

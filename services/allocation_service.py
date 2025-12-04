@@ -741,6 +741,282 @@ class AllocationService(BaseService):
         # In production, fetch from database
         return ServiceResult.not_found(f"Allocation {allocation_id} not found")
     
+    @measure_time
+    def get_allocation_visualization(self, allocation_id: str, 
+                                     property_id: Optional[str] = None,
+                                     year: Optional[int] = None) -> ServiceResult[Dict[str, Any]]:
+        """
+        Get visualization data for an allocation.
+        
+        Args:
+            allocation_id: Allocation ID to visualize
+            property_id: Optional property filter
+            year: Optional year filter
+            
+        Returns:
+            ServiceResult containing visualization data
+        """
+        if not allocation_id:
+            return ServiceResult.validation_error(["allocation_id is required"])
+        
+        return self._execute(
+            self._get_visualization_impl,
+            allocation_id, property_id, year
+        )
+    
+    def _get_visualization_impl(self, allocation_id: str,
+                                property_id: Optional[str],
+                                year: Optional[int]) -> ServiceResult[Dict[str, Any]]:
+        """Implementation of get_allocation_visualization"""
+        
+        # In production, fetch from database
+        # For now, return mock visualization data
+        
+        # Mock allocation data
+        all_allocations = [
+            {
+                "property_id": "550e8400-e29b-41d4-a716-446655440001",
+                "property_name": "Brisbane Plaza",
+                "year": 2030,
+                "baseline_emission": 1500.0,
+                "allocated_target": 825.0,
+                "reduction_amount": 675.0,
+                "reduction_percentage": 45.0,
+                "estimated_cost": 85000.0
+            },
+            {
+                "property_id": "550e8400-e29b-41d4-a716-446655440002",
+                "property_name": "Melbourne Tower",
+                "year": 2030,
+                "baseline_emission": 1800.0,
+                "allocated_target": 990.0,
+                "reduction_amount": 810.0,
+                "reduction_percentage": 45.0,
+                "estimated_cost": 102000.0
+            },
+            {
+                "property_id": "550e8400-e29b-41d4-a716-446655440003",
+                "property_name": "Sydney Centre",
+                "year": 2030,
+                "baseline_emission": 1400.0,
+                "allocated_target": 770.0,
+                "reduction_amount": 630.0,
+                "reduction_percentage": 45.0,
+                "estimated_cost": 79500.0
+            }
+        ]
+        
+        # Apply filters
+        filtered_allocations = all_allocations
+        if property_id:
+            filtered_allocations = [a for a in filtered_allocations if a["property_id"] == property_id]
+        if year:
+            filtered_allocations = [a for a in filtered_allocations if a["year"] == year]
+        
+        # Build visualization data
+        visualization_data = {
+            "allocation_id": allocation_id,
+            "property_breakdown": filtered_allocations,
+            
+            "summary_metrics": {
+                "total_properties": len(filtered_allocations),
+                "total_baseline": sum(a["baseline_emission"] for a in filtered_allocations),
+                "total_reduction": sum(a["reduction_amount"] for a in filtered_allocations),
+                "total_cost": sum(a["estimated_cost"] for a in filtered_allocations),
+                "avg_reduction_percentage": sum(a["reduction_percentage"] for a in filtered_allocations) / len(filtered_allocations) if filtered_allocations else 0,
+                "emission_unit": "kg-CO2e",
+                "cost_unit": "USD"
+            },
+            
+            "timeline_data": [
+                {
+                    "year": 2025,
+                    "cumulative_reduction": 0.0,
+                    "cumulative_cost": 0.0
+                },
+                {
+                    "year": 2030,
+                    "cumulative_reduction": sum(a["reduction_amount"] for a in filtered_allocations),
+                    "cumulative_cost": sum(a["estimated_cost"] for a in filtered_allocations)
+                }
+            ],
+            
+            "fairness_metrics": {
+                "gini_coefficient": 0.15,
+                "max_min_ratio": 1.2,
+                "variance": 0.08
+            },
+            
+            "cost_distribution": [
+                {
+                    "property_id": a["property_id"],
+                    "property_name": a["property_name"],
+                    "cost_share": (a["estimated_cost"] / sum(x["estimated_cost"] for x in filtered_allocations)) * 100,
+                    "cost_unit": "USD"
+                }
+                for a in filtered_allocations
+            ],
+            
+            "filters_applied": {
+                "property_id": property_id,
+                "year": year
+            }
+        }
+        
+        return ServiceResult.success(
+            data=visualization_data,
+            message="Visualization data retrieved successfully"
+        )
+    
+    @measure_time
+    def get_property_allocation(self, property_id: str,
+                               scenario_id: Optional[str] = None) -> ServiceResult[Dict[str, Any]]:
+        """
+        Get allocation data for a specific property.
+        
+        Args:
+            property_id: Property ID
+            scenario_id: Optional scenario filter
+            
+        Returns:
+            ServiceResult containing property allocation data
+        """
+        if not property_id:
+            return ServiceResult.validation_error(["property_id is required"])
+        
+        return self._execute(
+            self._get_property_allocation_impl,
+            property_id, scenario_id
+        )
+    
+    def _get_property_allocation_impl(self, property_id: str,
+                                      scenario_id: Optional[str]) -> ServiceResult[Dict[str, Any]]:
+        """Implementation of get_property_allocation"""
+        
+        # In production, fetch from database
+        # For now, return mock data
+        
+        property_data = {
+            "property_id": property_id,
+            "property_name": "Sample Property",
+            "allocations": [
+                {
+                    "allocation_id": "ALLOC-20251204-001",
+                    "scenario_id": scenario_id or "SCEN-12345678",
+                    "year": 2030,
+                    "baseline_emission": 1500.0,
+                    "allocated_target": 825.0,
+                    "reduction_amount": 675.0,
+                    "reduction_percentage": 45.0,
+                    "allocation_weight": 0.33,
+                    "feasibility_score": 85.0,
+                    "estimated_cost": 85000.0,
+                    "emission_unit": "kg-CO2e",
+                    "cost_unit": "USD"
+                },
+                {
+                    "allocation_id": "ALLOC-20251204-001",
+                    "scenario_id": scenario_id or "SCEN-12345678",
+                    "year": 2050,
+                    "baseline_emission": 1500.0,
+                    "allocated_target": 150.0,
+                    "reduction_amount": 1350.0,
+                    "reduction_percentage": 90.0,
+                    "allocation_weight": 0.33,
+                    "feasibility_score": 75.0,
+                    "estimated_cost": 195000.0,
+                    "emission_unit": "kg-CO2e",
+                    "cost_unit": "USD"
+                }
+            ],
+            "recommended_actions": [
+                "Install solar panels (capacity: 50kW)",
+                "Upgrade HVAC system to high-efficiency model",
+                "LED lighting retrofit for common areas"
+            ],
+            "implementation_timeline": [
+                {
+                    "phase": 1,
+                    "year_range": "2025-2027",
+                    "actions": ["Solar panel installation", "LED retrofit"],
+                    "expected_reduction": 350.0,
+                    "estimated_cost": 45000.0
+                },
+                {
+                    "phase": 2,
+                    "year_range": "2028-2030",
+                    "actions": ["HVAC upgrade"],
+                    "expected_reduction": 325.0,
+                    "estimated_cost": 40000.0
+                }
+            ]
+        }
+        
+        return ServiceResult.success(
+            data=property_data,
+            message=f"Property allocation data retrieved for {property_id}"
+        )
+    
+    @measure_time
+    @transaction
+    def register_allocation(self, allocation_id: str,
+                           approval_info: Dict[str, Any]) -> ServiceResult[Dict[str, Any]]:
+        """
+        Register allocation as official property targets.
+        
+        Args:
+            allocation_id: Allocation to register
+            approval_info: Approval metadata (approved_by, approval_date, notes)
+            
+        Returns:
+            ServiceResult containing registration confirmation
+        """
+        if not allocation_id:
+            return ServiceResult.validation_error(["allocation_id is required"])
+        
+        return self._execute(
+            self._register_allocation_impl,
+            allocation_id, approval_info
+        )
+    
+    def _register_allocation_impl(self, allocation_id: str,
+                                  approval_info: Dict[str, Any]) -> ServiceResult[Dict[str, Any]]:
+        """Implementation of register_allocation"""
+        
+        # In production:
+        # 1. Validate allocation exists
+        # 2. Check if already registered
+        # 3. Save to database
+        # 4. Update property targets
+        # 5. Trigger notifications
+        
+        registration_id = f"REG-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+        
+        registration_data = {
+            "registration_id": registration_id,
+            "allocation_id": allocation_id,
+            "status": "registered",
+            "approved_by": approval_info.get("approved_by"),
+            "approval_date": approval_info.get("approval_date"),
+            "approval_status": approval_info.get("approval_status", "approved"),
+            "notes": approval_info.get("notes"),
+            "registered_at": datetime.utcnow().isoformat(),
+            "next_steps": [
+                "Review long-term implementation plan",
+                "Set up monitoring dashboards",
+                "Schedule quarterly review meetings"
+            ]
+        }
+        
+        # Invalidate cache
+        self._invalidate_cache(f"allocation:{allocation_id}")
+        
+        return ServiceResult.success(
+            data=registration_data,
+            message=f"Allocation {allocation_id} registered successfully as {registration_id}"
+        )
+    
+    
     # =========================================================================
     # ANALYSIS
     # =========================================================================
@@ -800,5 +1076,8 @@ __all__ = [
     'AllocationRequest',
     'AllocationResult',
     'PropertyAllocation',
-    'AllocationAdjustment'
+    'AllocationAdjustment',
+    'get_allocation_visualization',
+    'get_property_allocation', 
+    'register_allocation'
 ]

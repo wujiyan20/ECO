@@ -32,6 +32,8 @@ from services import (
     ServiceResult
 )
 
+from services.base_service import ServiceResultStatus
+
 # Initialize allocation service
 allocation_service = AllocationService(db_manager=None)
 
@@ -801,6 +803,83 @@ async def calculate_target_allocation(
             status_code=500
         )
 
+# @router.get("/visualization/{allocation_id}", response_model=APIResponse)
+# @measure_execution_time
+# async def get_target_division_visualization(
+    # allocation_id: str = Path(..., description="UUID of allocation calculation"),
+    # property_id: Optional[str] = Query(None, description="Filter by specific property"),
+    # year: Optional[int] = Query(None, ge=2025, le=2070, description="Filter by specific year"),
+    # current_user: TokenData = Depends(get_current_user),
+    # _: bool = Depends(check_rate_limit_dependency)
+# ):
+    # """
+    # API 6: Get Target Division Visualization
+    
+    # Retrieve visualization-ready data for target allocation results.
+    # Supports filtering by property and year.
+    
+    # **Authentication Required:** Bearer Token
+    
+    # **Query Parameters:**
+    # - property_id: Filter results for specific property
+    # - year: Filter results for specific year
+    
+    # **Response includes:**
+    # - Property-level target breakdowns
+    # - Comparative analysis across properties
+    # - Timeline visualizations for each property
+    # - Allocation fairness metrics
+    # - Cost distribution charts
+    # """
+    # request_id = generate_request_id()
+    
+    # try:
+        # logger.info(
+            # f"Retrieving target division visualization (request_id: {request_id}, "
+            # f"allocation_id: {allocation_id})"
+        # )
+        
+        # # TODO: Retrieve from database/cache
+        # # allocation_data = await db.target_allocations.find_one({"allocation_id": allocation_id})
+        
+        # visualization_data = {
+            # "allocation_id": allocation_id,
+            # "visualization_config": {
+                # "chart_types": {
+                    # "property_comparison": "bar",
+                    # "timeline": "line",
+                    # "cost_distribution": "treemap",
+                    # "fairness_metrics": "radar"
+                # },
+                # "color_scheme": {
+                    # "primary": "#2E8B57",
+                    # "secondary": "#FF6B6B",
+                    # "tertiary": "#4ECDC4",
+                    # "quaternary": "#FFD93D"
+                # }
+            # },
+            # "filters_applied": {
+                # "property_id": property_id,
+                # "year": year
+            # }
+        # }
+        
+        # return create_success_response(
+            # data=visualization_data,
+            # request_id=request_id,
+            # message="Target division visualization data retrieved successfully"
+        # )
+        
+    # except Exception as e:
+        # logger.error(f"Visualization error (request_id: {request_id}): {str(e)}", exc_info=True)
+        # return create_error_response(
+            # error_code="VISUALIZATION_ERROR",
+            # error_message="Error retrieving visualization data",
+            # request_id=request_id,
+            # status_code=500
+        # )
+
+
 @router.get("/visualization/{allocation_id}", response_model=APIResponse)
 @measure_execution_time
 async def get_target_division_visualization(
@@ -811,7 +890,7 @@ async def get_target_division_visualization(
     _: bool = Depends(check_rate_limit_dependency)
 ):
     """
-    API 6: Get Target Division Visualization
+    API 5: Get Target Division Visualization
     
     Retrieve visualization-ready data for target allocation results.
     Supports filtering by property and year.
@@ -834,48 +913,200 @@ async def get_target_division_visualization(
     try:
         logger.info(
             f"Retrieving target division visualization (request_id: {request_id}, "
-            f"allocation_id: {allocation_id})"
+            f"allocation_id: {allocation_id}, property_id: {property_id}, year: {year})"
         )
         
-        # TODO: Retrieve from database/cache
-        # allocation_data = await db.target_allocations.find_one({"allocation_id": allocation_id})
+        # Call service layer
+        result = allocation_service.get_allocation_visualization(
+            allocation_id=allocation_id,
+            property_id=property_id,
+            year=year
+        )
         
-        visualization_data = {
-            "allocation_id": allocation_id,
-            "visualization_config": {
-                "chart_types": {
-                    "property_comparison": "bar",
-                    "timeline": "line",
-                    "cost_distribution": "treemap",
-                    "fairness_metrics": "radar"
-                },
-                "color_scheme": {
-                    "primary": "#2E8B57",
-                    "secondary": "#FF6B6B",
-                    "tertiary": "#4ECDC4",
-                    "quaternary": "#FFD93D"
-                }
-            },
-            "filters_applied": {
-                "property_id": property_id,
-                "year": year
-            }
-        }
+        if not result.is_success:
+            logger.error(f"Visualization retrieval failed: {result.message}")
+            return create_error_response(
+                error_code="VISUALIZATION_ERROR",
+                error_message=result.message or "Failed to retrieve visualization data",
+                request_id=request_id,
+                status_code=500
+            )
+        
+        logger.info(f"Visualization data retrieved successfully (request_id: {request_id})")
         
         return create_success_response(
-            data=visualization_data,
+            data=result.data,
             request_id=request_id,
             message="Target division visualization data retrieved successfully"
         )
         
     except Exception as e:
         logger.error(f"Visualization error (request_id: {request_id}): {str(e)}", exc_info=True)
+        logger.error(f"Exception type: {type(e).__name__}")
+        logger.error(f"Exception details: {repr(e)}")
         return create_error_response(
             error_code="VISUALIZATION_ERROR",
-            error_message="Error retrieving visualization data",
+            error_message=str(e),
             request_id=request_id,
             status_code=500
         )
+
+
+@router.get("/property/{property_id}", response_model=APIResponse)
+@measure_execution_time
+async def get_property_allocation(
+    property_id: str = Path(..., description="UUID of the property"),
+    scenario_id: Optional[str] = Query(None, description="Filter by specific scenario"),
+    current_user: TokenData = Depends(get_current_user),
+    _: bool = Depends(check_rate_limit_dependency)
+):
+    """
+    API 6: Get Property Allocation
+    
+    Retrieve allocation data for a specific property across all target years.
+    
+    **Authentication Required:** Bearer Token
+    
+    **Path Parameters:**
+    - property_id: UUID of the property
+    
+    **Query Parameters:**
+    - scenario_id: Optional scenario filter
+    
+    **Response includes:**
+    - Property details
+    - All allocations for the property (2030, 2050)
+    - Recommended actions
+    - Implementation timeline
+    - Feasibility assessment
+    """
+    request_id = generate_request_id()
+    
+    try:
+        logger.info(
+            f"Retrieving property allocation (request_id: {request_id}, "
+            f"property_id: {property_id}, scenario_id: {scenario_id})"
+        )
+        
+        # Call service layer
+        result = allocation_service.get_property_allocation(
+            property_id=property_id,
+            scenario_id=scenario_id
+        )
+        
+        if not result.is_success:
+            logger.error(f"Property allocation retrieval failed: {result.message}")
+            return create_error_response(
+                error_code="RETRIEVAL_ERROR",
+                error_message=result.message or "Failed to retrieve property allocation",
+                request_id=request_id,
+                status_code=404 if result.status == ServiceResultStatus.NOT_FOUND else 500
+            )
+        
+        logger.info(f"Property allocation retrieved successfully (request_id: {request_id})")
+        
+        return create_success_response(
+            data=result.data,
+            request_id=request_id,
+            message=f"Property allocation retrieved for {property_id}"
+        )
+        
+    except Exception as e:
+        logger.error(f"Property allocation error (request_id: {request_id}): {str(e)}", exc_info=True)
+        logger.error(f"Exception type: {type(e).__name__}")
+        logger.error(f"Exception details: {repr(e)}")
+        return create_error_response(
+            error_code="RETRIEVAL_ERROR",
+            error_message=str(e),
+            request_id=request_id,
+            status_code=500
+        )
+
+
+# @router.post("/register", response_model=APIResponse)
+# @measure_execution_time
+# async def register_target_division(
+    # request: RegisterTargetDivisionRequest,
+    # background_tasks: BackgroundTasks,
+    # current_user: TokenData = Depends(get_current_user),
+    # _: bool = Depends(check_rate_limit_dependency)
+# ):
+    # """
+    # API 7: Register Target Division
+    
+    # Register the selected target allocation as the official property-level targets.
+    # Persists allocations to database and activates them for implementation planning.
+    
+    # **Authentication Required:** Bearer Token
+    
+    # **Key Features:**
+    # - Validates allocation exists
+    # - Records approval metadata
+    # - Activates property-level targets
+    # - Triggers downstream processes (planning, notifications)
+    # - Creates audit trail
+    
+    # **Business Logic:**
+    # 1. Validates allocation_id exists
+    # 2. Checks user approval permissions
+    # 3. Persists approved allocation
+    # 4. Updates property target tables
+    # 5. Triggers notification workflow
+    # 6. Returns registration confirmation
+    # """
+    # request_id = generate_request_id()
+    
+    # try:
+        # logger.info(
+            # f"Registering target division (request_id: {request_id}, "
+            # f"allocation_id: {request.allocation_id}, user: {current_user.user_id})"
+        # )
+        
+        # # TODO: Validate allocation exists
+        # # allocation = await db.target_allocations.find_one({"allocation_id": request.allocation_id})
+        
+        # registration_id = f"REG_{int(datetime.utcnow().timestamp())}_{uuid.uuid4().hex[:6]}"
+        
+        # registration_data = {
+            # "registration_id": registration_id,
+            # "allocation_id": request.allocation_id,
+            # "approval_status": request.approval_status.value,
+            # "approved_by": request.approved_by or current_user.user_id,
+            # "approval_date": request.approval_date.isoformat(),
+            # "notes": request.notes,
+            # "registered_at": datetime.utcnow().isoformat(),
+            # "registered_by": current_user.user_id
+        # }
+        
+        # # TODO: Persist to database
+        # # await db.registered_allocations.insert_one(registration_data)
+        
+        # logger.info(f"Target division registered successfully (registration_id: {registration_id})")
+        
+        # return create_success_response(
+            # data=registration_data,
+            # request_id=request_id,
+            # status_code=201,
+            # message="Target division registered successfully"
+        # )
+        
+    # except Exception as e:
+        # logger.error(f"Registration error (request_id: {request_id}): {str(e)}", exc_info=True)
+        # return create_error_response(
+            # error_code="REGISTRATION_ERROR",
+            # error_message="Error during target division registration",
+            # request_id=request_id,
+            # status_code=500
+        # )
+
+
+
+
+
+# =============================================================================
+# 4. REPLACE API 7 - POST /register
+# Replace lines 849-923 with this implementation:
+# =============================================================================
 
 @router.post("/register", response_model=APIResponse)
 @measure_execution_time
@@ -916,29 +1147,46 @@ async def register_target_division(
             f"allocation_id: {request.allocation_id}, user: {current_user.user_id})"
         )
         
-        # TODO: Validate allocation exists
-        # allocation = await db.target_allocations.find_one({"allocation_id": request.allocation_id})
-        
-        registration_id = f"REG_{int(datetime.utcnow().timestamp())}_{uuid.uuid4().hex[:6]}"
-        
-        registration_data = {
-            "registration_id": registration_id,
-            "allocation_id": request.allocation_id,
-            "approval_status": request.approval_status.value,
+        # Prepare approval info
+        approval_info = {
             "approved_by": request.approved_by or current_user.user_id,
-            "approval_date": request.approval_date.isoformat(),
-            "notes": request.notes,
-            "registered_at": datetime.utcnow().isoformat(),
-            "registered_by": current_user.user_id
+            "approval_date": request.approval_date.isoformat() if request.approval_date else datetime.utcnow().isoformat(),
+            "approval_status": request.approval_status.value if hasattr(request.approval_status, 'value') else str(request.approval_status),
+            "notes": request.notes
         }
         
-        # TODO: Persist to database
-        # await db.registered_allocations.insert_one(registration_data)
+        # Call service layer
+        result = allocation_service.register_allocation(
+            allocation_id=request.allocation_id,
+            approval_info=approval_info
+        )
         
-        logger.info(f"Target division registered successfully (registration_id: {registration_id})")
+        if not result.is_success:
+            logger.error(f"Registration failed: {result.message}")
+            
+            # Check if validation error
+            if result.status == ServiceResultStatus.VALIDATION_ERROR:
+                return create_error_response(
+                    error_code="VALIDATION_ERROR",
+                    error_message=result.message,
+                    request_id=request_id,
+                    status_code=400
+                )
+            
+            return create_error_response(
+                error_code="REGISTRATION_ERROR",
+                error_message=result.message or "Registration failed",
+                request_id=request_id,
+                status_code=500
+            )
+        
+        logger.info(f"Target division registered successfully (registration_id: {result.data['registration_id']})")
+        
+        # Optional: Add background task for notifications
+        # background_tasks.add_task(send_registration_notification, result.data)
         
         return create_success_response(
-            data=registration_data,
+            data=result.data,
             request_id=request_id,
             status_code=201,
             message="Target division registered successfully"
@@ -946,9 +1194,11 @@ async def register_target_division(
         
     except Exception as e:
         logger.error(f"Registration error (request_id: {request_id}): {str(e)}", exc_info=True)
+        logger.error(f"Exception type: {type(e).__name__}")
+        logger.error(f"Exception details: {repr(e)}")
         return create_error_response(
             error_code="REGISTRATION_ERROR",
-            error_message="Error during target division registration",
+            error_message=str(e),
             request_id=request_id,
             status_code=500
         )

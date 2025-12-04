@@ -47,6 +47,10 @@ logger = logging.getLogger(__name__)
 # BASE SERVICE COMPONENTS
 # =============================================================================
 
+from .planning_service import PlanningService
+from .reoptimization_service import ReoptimizationService
+
+
 from .base_service import (
     # Result classes
     ServiceResultStatus,
@@ -450,6 +454,9 @@ __all__ = [
     'Report',
     'DashboardData',
     'COLOR_SCHEMES',
+    
+    'PlanningService',
+    'ReoptimizationService',
     
     # Factory and utilities
     'ServiceFactory',

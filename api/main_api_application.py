@@ -22,6 +22,9 @@ from api_core import (
 # Import module routers
 from api_module1_milestones import router as milestones_router
 from api_module2_target_division import router as target_division_router
+from api_module3_long_term_planning import router as planning_router
+from api_module4_reoptimization import router as reoptimization_router
+
 
 logger = logging.getLogger(__name__)
 
@@ -241,6 +244,17 @@ app.include_router(
     prefix=BASE_URL
 )
 
+# Module 3: Long-term Planning APIs
+app.include_router(
+    planning_router,
+    prefix=BASE_URL
+)
+
+# Module 4: Annual Reoptimization APIs
+app.include_router(
+    reoptimization_router,
+    prefix=BASE_URL
+)
 # =============================================================================
 # MODULE 3: LONG-TERM PLANNING APIs (Inline Implementation)
 # =============================================================================
