@@ -16,6 +16,7 @@ import math
 from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime
 from dataclasses import dataclass, field
+from models import ValidationError
 
 from .base_service import (
     BaseService,
@@ -212,9 +213,20 @@ class MilestoneService(BaseService):
         
         try:
             if MODELS_AVAILABLE:
-                validate_year(request.base_year, "base_year")
-                validate_year(request.mid_term_year, "mid_term_year")
-                validate_year(request.long_term_year, "long_term_year")
+                try:
+                    validate_year(int(request.base_year))
+                except (ValueError, ValidationError) as e:
+                    errors.append(f"Invalid base_year: {str(e)}")
+
+                try:
+                    validate_year(int(request.mid_term_year))  # Correct field
+                except (ValueError, ValidationError) as e:
+                    errors.append(f"Invalid mid_term_year: {str(e)}")
+
+                try:
+                    validate_year(int(request.long_term_year))  # Correct field
+                except (ValueError, ValidationError) as e:
+                    errors.append(f"Invalid long_term_year: {str(e)}")
                 validate_year_range(request.base_year, request.long_term_year)
         except ValueError as e:
             errors.append(str(e))
