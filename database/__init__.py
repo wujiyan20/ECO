@@ -1,40 +1,69 @@
-# database/__init__.py - Database Package Initialization
+# database/__init__.py - Database Package
 """
-EcoAssist Database Package - Simple Integration
-Provides database access for the EcoAssist system
+EcoAssist Database Layer Package
+
+This package provides database access and management for the EcoAssist system.
+
+Components:
+- DatabaseConfig: Configuration management
+- DatabaseManager: Database operations and connection management
+
+Usage:
+    from database import DatabaseManager, DatabaseConfig, get_db_manager
+    
+    # Quick setup
+    db = get_db_manager()
+    
+    # Or manual setup
+    config = DatabaseConfig(server='jiyan', database='EcoAssist')
+    db = DatabaseManager(config)
 """
+
+__version__ = "1.0.0"
+__author__ = "EcoAssist Development Team"
 
 import logging
 
 logger = logging.getLogger(__name__)
 
-# Package version
-__version__ = '1.0.0'
+# =============================================================================
+# DATABASE CONFIGURATION
+# =============================================================================
 
-# Import only what we have
-try:
-    from .database_config import (
-        DatabaseConfig,
-        DEVELOPMENT_CONFIG,
-        PRODUCTION_CONFIG,
-        get_config
-    )
-    from .database_manager import (
-        DatabaseManager,
-        get_db_manager
-    )
+from .database_config import (
+    DatabaseConfig,
+    DEVELOPMENT_CONFIG,
+    PRODUCTION_CONFIG,
+    get_config
+)
+
+# =============================================================================
+# DATABASE MANAGER
+# =============================================================================
+
+from .database_manager import (
+    DatabaseManager,
+    get_db_manager
+)
+
+# =============================================================================
+# EXPORTS
+# =============================================================================
+
+__all__ = [
+    # Version
+    '__version__',
     
-    __all__ = [
-        'DatabaseConfig',
-        'DEVELOPMENT_CONFIG',
-        'PRODUCTION_CONFIG',
-        'get_config',
-        'DatabaseManager',
-        'get_db_manager',
-    ]
+    # Configuration
+    'DatabaseConfig',
+    'DEVELOPMENT_CONFIG',
+    'PRODUCTION_CONFIG',
+    'get_config',
     
-    logger.info(f"EcoAssist Database Package v{__version__} initialized")
-    
-except ImportError as e:
-    logger.error(f"Failed to import database modules: {e}")
-    raise
+    # Manager
+    'DatabaseManager',
+    'get_db_manager',
+]
+
+# Log package initialization
+logger.info(f"Database package v{__version__} initialized successfully")
