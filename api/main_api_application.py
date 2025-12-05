@@ -10,6 +10,9 @@ import logging
 import time
 from datetime import datetime, timedelta
 
+# NEW: Database integration
+from database.database_manager import get_db_manager
+
 from api_core import (
     API_VERSION,
     BASE_URL,
@@ -53,7 +56,29 @@ async def lifespan(app: FastAPI):
     try:
         # TODO: Initialize database connections
         # await init_database()
+        try:
+            db = get_db_manager()
+            health = db.health_check()
+            
+            if health['status'] == 'healthy':
+                logger.info("✅ Database connected successfully")
+                logger.info(f"   Server: {health['server']}")
+                logger.info(f"   Database: {health['database']}")
+                for table, count in health.get('table_counts', {}).items():
+                    logger.info(f"   {table}: {count} records")
+            else:
+                logger.warning("⚠️ Database connection failed - running in mock mode")
+        except Exception as e:
+            logger.error(f"❌ Database connection error: {e}")
+            logger.warning("⚠️ APIs will run in mock mode")
         logger.info("✓ Database connections initialized")
+        
+        try:
+            from api_module1_milestones import initialize_milestone_service
+            await initialize_milestone_service()
+            logger.info("✓ Milestone service initialized")
+        except Exception as e:
+            logger.error(f"⚠️ Milestone service initialization failed: {e}")
         
         # TODO: Initialize cache
         # await init_cache()
