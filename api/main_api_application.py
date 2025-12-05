@@ -1,6 +1,11 @@
 # main_api_application.py - Main FastAPI Application
 # EcoAssist AI REST API Layer - Complete Integration
 # Version 2.0 - Comprehensive implementation
+import sys
+import os
+# Add project root to Python path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 from fastapi import FastAPI, Request, Response, status, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
