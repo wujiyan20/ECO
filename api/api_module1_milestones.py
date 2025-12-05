@@ -12,6 +12,9 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
+from database.database_manager import get_db_manager, DatabaseManager
+from typing import Optional
+
 from services import (
     MilestoneService,
     MilestoneCalculationRequest as ServiceMilestoneRequest,
@@ -43,9 +46,28 @@ from api_core import (
     TokenData
 )
 
-milestone_service = MilestoneService(db_manager=None)  # None = mock mode
+# milestone_service = MilestoneService(db_manager=None)  # None = mock mode
+milestone_service = None 
 
 logger = logging.getLogger(__name__)
+
+async def initialize_milestone_service():
+    """Initialize milestone service with database connection"""
+    global milestone_service
+    
+    try:
+        db = get_db_manager()
+        if db and db.test_connection():
+            logger.info("✅ Database connected - milestone service in DATABASE mode")
+            milestone_service = MilestoneService(db_manager=db)
+        else:
+            logger.warning("⚠️ Database not available - milestone service in MOCK mode")
+            milestone_service = MilestoneService(db_manager=None)
+    except Exception as e:
+        logger.error(f"❌ Database initialization error: {e}")
+        logger.warning("⚠️ Milestone service will run in MOCK mode")
+        milestone_service = MilestoneService(db_manager=None)
+
 
 # Create router for milestone APIs
 router = APIRouter(

@@ -18,6 +18,8 @@ from datetime import datetime
 from dataclasses import dataclass, field
 from models import ValidationError
 
+from database.database_manager import DatabaseManager
+
 from .base_service import (
     BaseService,
     ServiceResult,
@@ -168,6 +170,10 @@ class MilestoneService(BaseService):
         super().__init__(db_manager)
         self._milestone_repo: Optional[MilestoneRepository] = None
         self._ai_optimizer: Optional[MilestoneOptimizer] = None
+        self.use_database_for_persistence = (
+            db_manager is not None and 
+            hasattr(db_manager, 'create_scenario')  # Check if it's our new DatabaseManager
+        )
     
     def _do_initialize(self) -> None:
         """Initialize repositories and AI"""
@@ -270,6 +276,34 @@ class MilestoneService(BaseService):
                 "ai_optimized": self._ai_optimizer is not None
             }
         )
+        
+        if self.use_database_for_persistence and request.base_year:
+            try:
+                # Save recommended scenario to database
+                recommended_scenario = next(
+                    s for s in all_scenarios if s['scenario_id'] == recommended_scenario_id
+                )
+                
+                scenario_id = self.db_manager.create_scenario({
+                    'user_id': getattr(request, 'user_id', None),
+                    'scenario_name': f"{recommended_scenario['scenario_type']} Scenario - {request.base_year}",
+                    'baseline_year': request.base_year,
+                    'target_year': request.long_term_year,
+                    'baseline_emission': request.baseline_emission,
+                    'target_reduction_percentage': recommended_scenario.get('reduction_2050', 0),
+                    'scenario_type': recommended_scenario['scenario_type'].lower(),
+                    'description': recommended_scenario.get('description', ''),
+                    'target_emission': recommended_scenario.get('total_target_emission', 0),
+                    'reduction_required': recommended_scenario.get('total_reduction', 0),
+                    'status': 'calculated'
+                })
+                
+                # Add scenario_id to result
+                result.scenario_id = scenario_id  # You may need to add this field to MilestoneCalculationResult
+                
+                self._logger.info(f"Saved scenario to database: {scenario_id}")
+            except Exception as e:
+                self._logger.warning(f"Failed to save scenario to database: {e}")
         
         return ServiceResult.success(result)
     
