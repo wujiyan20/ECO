@@ -10,6 +10,9 @@ import uuid
 import logging
 import numpy as np
 
+# NEW: Database integration
+from database.database_manager import get_db_manager
+
 from api_core import (
     APIResponse,
     ErrorResponse,
@@ -34,10 +37,28 @@ from services import (
 
 from services.base_service import ServiceResultStatus
 
-# Initialize allocation service
-allocation_service = AllocationService(db_manager=None)
+# Initialize allocation service (will be set up in startup)
+allocation_service = None
 
 logger = logging.getLogger(__name__)
+
+# Initialize allocation service with database
+async def initialize_allocation_service():
+    """Initialize allocation service with database connection"""
+    global allocation_service
+    
+    try:
+        db = get_db_manager()
+        if db and db.test_connection():
+            logger.info("✅ Database connected - allocation service in DATABASE mode")
+            allocation_service = AllocationService(db_manager=db)
+        else:
+            logger.warning("⚠️ Database not available - allocation service in MOCK mode")
+            allocation_service = AllocationService(db_manager=None)
+    except Exception as e:
+        logger.error(f"❌ Database initialization error: {e}")
+        logger.warning("⚠️ Allocation service will run in MOCK mode")
+        allocation_service = AllocationService(db_manager=None)
 
 # Create router for target division APIs
 router = APIRouter(

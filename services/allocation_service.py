@@ -142,6 +142,14 @@ class AllocationService(BaseService):
         self._property_service = property_service
         self._ai_allocator: Optional[PropertyTargetAllocator] = None
         self._property_repo: Optional[PropertyRepository] = None
+        
+        # Database integration flag
+        self.use_database_for_persistence = (
+            db_manager is not None and 
+            hasattr(db_manager, 'create_allocation')
+        )
+        if self.use_database_for_persistence:
+            self._logger.info("AllocationService will save allocations to database")
     
     def _do_initialize(self) -> None:
         """Initialize AI allocator and repositories"""
@@ -229,6 +237,60 @@ class AllocationService(BaseService):
             total_target=request.total_reduction_target * len(request.target_years),
             coverage_percentage=(total_allocated / (request.total_reduction_target * len(request.target_years))) * 100 if request.total_reduction_target > 0 else 0
         )
+        
+        # NEW: Save to database if available
+        if self.use_database_for_persistence:
+            try:
+                # Calculate totals for allocation record
+                total_baseline = sum(p.get('baseline_emission', 0) for p in properties)
+                
+                # Create allocation record
+                db_allocation_id = self.db_manager.create_allocation({
+                    'scenario_id': request.scenario_id,
+                    'user_id': getattr(request, 'user_id', None) or '00000000-0000-0000-0000-000000000001',
+                    'allocation_name': f"Target Allocation - {request.allocation_method} - {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}",
+                    'allocation_strategy': request.allocation_method,
+                    'optimization_method': 'AI' if request.allocation_method == 'AI_OPTIMIZED' else 'RULE_BASED',
+                    'total_properties': len(properties),
+                    'total_baseline_emission': total_baseline,
+                    'total_target_reduction': total_allocated,
+                    'fairness_score': metrics.get('fairness_score', 0.0),
+                    'feasibility_score': metrics.get('feasibility_score', 0.0),
+                    'optimization_score': metrics.get('optimization_score', 0.0),
+                    'status': 'calculated'
+                })
+                
+                # Save property targets
+                property_targets = []
+                for alloc in allocations:
+                    # Safe conversion with bounds checking
+                    feasibility = alloc.feasibility_score if alloc.feasibility_score is not None else 0.5
+                    feasibility_pct = min(max(feasibility * 100, 0), 100)  # Clamp to 0-100
+                    
+                    priority = alloc.allocation_weight if alloc.allocation_weight is not None else 0.5
+                    priority_int = min(max(int(priority * 10), 1), 10)  # Clamp to 1-10
+                    
+                    property_targets.append({
+                        'property_id': alloc.property_id,
+                        'property_name': getattr(alloc, 'property_name', None),
+                        'baseline_emission': float(alloc.baseline_emission) if alloc.baseline_emission else 0.0,
+                        'target_emission': float(alloc.allocated_target) if alloc.allocated_target else 0.0,
+                        'reduction_target': float(alloc.reduction_amount) if alloc.reduction_amount else 0.0,
+                        'reduction_percentage': float(alloc.reduction_percentage) if alloc.reduction_percentage else 0.0,
+                        'priority_level': priority_int,
+                        'feasibility_score': round(feasibility_pct, 2),  # Round to 2 decimal places
+                    })
+                
+                self.db_manager.create_property_targets(db_allocation_id, property_targets)
+                self._logger.info(f"✅ Saved allocation to database: {db_allocation_id} with {len(property_targets)} property targets")
+                
+                # Update result with database allocation_id
+                result.allocation_id = db_allocation_id
+                
+            except Exception as e:
+                self._logger.warning(f"⚠️ Failed to save allocation to database: {e}")
+                import traceback
+                self._logger.warning(traceback.format_exc())
         
         return ServiceResult.success(result)
     

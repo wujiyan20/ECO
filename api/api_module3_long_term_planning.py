@@ -18,6 +18,9 @@ from datetime import datetime
 import logging
 import uuid
 
+# NEW: Database integration
+from database.database_manager import get_db_manager
+
 # Import API core utilities
 from api_core import (
     APIResponse,
@@ -35,8 +38,26 @@ from services import PlanningService, ServiceResultStatus
 
 # Initialize
 router = APIRouter(prefix="/planning/long-term", tags=["long-term-planning"])
-planning_service = PlanningService(db_manager=None)
+planning_service = None
 logger = logging.getLogger(__name__)
+
+# Initialize planning service with database
+async def initialize_planning_service():
+    """Initialize planning service with database connection"""
+    global planning_service
+    
+    try:
+        db = get_db_manager()
+        if db and db.test_connection():
+            logger.info("✅ Database connected - planning service in DATABASE mode")
+            planning_service = PlanningService(db_manager=db)
+        else:
+            logger.warning("⚠️ Database not available - planning service in MOCK mode")
+            planning_service = PlanningService(db_manager=None)
+    except Exception as e:
+        logger.error(f"❌ Database initialization error: {e}")
+        logger.warning("⚠️ Planning service will run in MOCK mode")
+        planning_service = PlanningService(db_manager=None)
 
 
 # =============================================================================

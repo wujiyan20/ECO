@@ -84,6 +84,14 @@ class PlanningService(BaseService):
         """
         super().__init__(db_manager)
         self._calculation_cache = {}
+        
+        # Database integration flag
+        self.use_database_for_persistence = (
+            db_manager is not None and 
+            hasattr(db_manager, 'create_plan')
+        )
+        if self.use_database_for_persistence:
+            self._logger.info("PlanningService will save plans to database")
     
     def _do_initialize(self) -> None:
         """Initialize service resources"""
@@ -147,6 +155,93 @@ class PlanningService(BaseService):
         
         # Cache result
         self._calculation_cache[result.calculation_id] = result
+        
+        # NEW: Save recommended pattern to database if available
+        if self.use_database_for_persistence and patterns:
+            try:
+                # Save the balanced (recommended) pattern
+                recommended_pattern = patterns[1] if len(patterns) > 1 else patterns[0]
+                
+                # Derive pattern type from pattern name
+                pattern_name = getattr(recommended_pattern, 'pattern_name', 'Unknown Pattern')
+                if 'Aggressive' in pattern_name:
+                    pattern_type = 'aggressive'
+                elif 'Balanced' in pattern_name:
+                    pattern_type = 'balanced'
+                elif 'Conservative' in pattern_name:
+                    pattern_type = 'conservative'
+                else:
+                    pattern_type = 'balanced'  # Default
+                
+                # Extract financial summary (use safe attribute access)
+                financial = getattr(recommended_pattern, 'financial_summary', None)
+                if not financial:
+                    self._logger.warning("No financial_summary found, skipping database save")
+                    return ServiceResult.success(data=result, message=f"Generated {len(patterns)} planning patterns successfully")
+                
+                total_investment = getattr(financial, 'total_investment', 0.0)
+                total_reduction = getattr(financial, 'total_reduction_achieved', 0.0)
+                payback_period = getattr(financial, 'payback_period', getattr(financial, 'overall_roi_years', None))
+                
+                # Get annual plans (field is 'annual_plan' not 'annual_plans')
+                annual_plans_list = getattr(recommended_pattern, 'annual_plan', 
+                                           getattr(recommended_pattern, 'annual_plans', []))
+                
+                # Create plan record
+                db_plan_id = self.db_manager.create_plan({
+                    'scenario_id': request.scenario_id,
+                    'allocation_id': request.allocation_id,
+                    'user_id': getattr(request, 'user_id', None) or '00000000-0000-0000-0000-000000000001',
+                    'plan_name': f"{pattern_name} - {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}",
+                    'pattern_type': pattern_type,
+                    'start_year': request.planning_horizon.start_year,
+                    'end_year': request.planning_horizon.end_year,
+                    'planning_horizon_years': request.planning_horizon.end_year - request.planning_horizon.start_year,
+                    'total_investment': float(total_investment) if total_investment else 0.0,
+                    'total_capex': float(total_investment * 0.7) if total_investment else 0.0,
+                    'total_opex': float(total_investment * 0.3) if total_investment else 0.0,
+                    'total_reduction_target': float(total_reduction) if total_reduction else 0.0,
+                    'overall_roi_years': float(payback_period) if payback_period else None,
+                    'breakeven_year': request.planning_horizon.start_year + int(payback_period) if payback_period else None,
+                    'total_actions': len(annual_plans_list),
+                    'status': 'calculated'
+                })
+                
+                # Save annual plans
+                if annual_plans_list:
+                    annual_plans_data = []
+                    for annual_plan in annual_plans_list:
+                        # Safe attribute access for annual plan fields
+                        year = getattr(annual_plan, 'year', 0)
+                        annual_investment = getattr(annual_plan, 'total_investment', 
+                                                   getattr(annual_plan, 'annual_investment', 0.0))
+                        annual_reduction = getattr(annual_plan, 'total_reduction',
+                                                  getattr(annual_plan, 'annual_reduction', 0.0))
+                        actions = getattr(annual_plan, 'actions', [])
+                        
+                        annual_plans_data.append({
+                            'year': int(year) if year else request.planning_horizon.start_year,
+                            'total_investment': float(annual_investment) if annual_investment else 0.0,
+                            'capex': float(annual_investment * 0.7) if annual_investment else 0.0,
+                            'opex': float(annual_investment * 0.3) if annual_investment else 0.0,
+                            'target_reduction': float(annual_reduction) if annual_reduction else 0.0,
+                            'action_count': len(actions) if actions else 1,
+                            'status': 'planned'
+                        })
+                    
+                    self.db_manager.create_annual_plans(db_plan_id, annual_plans_data)
+                    self._logger.info(f"✅ Saved plan to database: {db_plan_id} with {len(annual_plans_data)} annual plans")
+                else:
+                    self._logger.warning("No annual plans found in pattern")
+                
+                # Update result with database plan_id (if pattern has this attribute)
+                if hasattr(recommended_pattern, 'plan_id'):
+                    recommended_pattern.plan_id = db_plan_id
+                
+            except Exception as e:
+                self._logger.warning(f"⚠️ Failed to save plan to database: {e}")
+                import traceback
+                self._logger.warning(traceback.format_exc())
         
         return ServiceResult.success(
             data=result,

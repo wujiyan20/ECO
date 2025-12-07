@@ -281,29 +281,50 @@ class MilestoneService(BaseService):
             try:
                 # Save recommended scenario to database
                 recommended_scenario = next(
-                    s for s in all_scenarios if s['scenario_id'] == recommended_scenario_id
+                    s for s in scenarios if s['scenario_id'] == recommended["scenario_id"]
                 )
                 
-                scenario_id = self.db_manager.create_scenario({
-                    'user_id': getattr(request, 'user_id', None),
-                    'scenario_name': f"{recommended_scenario['scenario_type']} Scenario - {request.base_year}",
+                # Calculate target emission and reduction required
+                target_emission = request.baseline_emission * (1 - recommended_scenario.get('reduction_2050', 0) / 100)
+                reduction_required = request.baseline_emission * (recommended_scenario.get('reduction_2050', 0) / 100)
+                
+                db_scenario_id = self.db_manager.create_scenario({
+                    'user_id': getattr(request, 'user_id', None) or '00000000-0000-0000-0000-000000000001',
+                    'scenario_name': f"{recommended_scenario['scenario_type']} Scenario - {request.base_year}-{request.long_term_year}",
                     'baseline_year': request.base_year,
                     'target_year': request.long_term_year,
                     'baseline_emission': request.baseline_emission,
                     'target_reduction_percentage': recommended_scenario.get('reduction_2050', 0),
                     'scenario_type': recommended_scenario['scenario_type'].lower(),
                     'description': recommended_scenario.get('description', ''),
-                    'target_emission': recommended_scenario.get('total_target_emission', 0),
-                    'reduction_required': recommended_scenario.get('total_reduction', 0),
+                    'target_emission': target_emission,
+                    'reduction_required': reduction_required,
                     'status': 'calculated'
                 })
                 
-                # Add scenario_id to result
-                result.scenario_id = scenario_id  # You may need to add this field to MilestoneCalculationResult
+                # Save milestones
+                reduction_targets = recommended_scenario.get('reduction_targets', [])
+                if reduction_targets:
+                    milestones = []
+                    for target in reduction_targets:
+                        milestones.append({
+                            'year': target.get('year'),
+                            'target_emission': target.get('target_emissions'),
+                            'reduction_from_baseline': target.get('reduction_from_baseline'),
+                            'reduction_percentage': target.get('reduction_from_baseline'),
+                            'cumulative_reduction': target.get('cumulative_reduction'),
+                            'annual_reduction': 0  # Calculate if needed
+                        })
+                    
+                    self.db_manager.create_scenario_milestones(db_scenario_id, milestones)
+                    self._logger.info(f"✅ Saved scenario to database: {db_scenario_id} with {len(milestones)} milestones")
+                else:
+                    self._logger.info(f"✅ Saved scenario to database: {db_scenario_id}")
                 
-                self._logger.info(f"Saved scenario to database: {scenario_id}")
             except Exception as e:
-                self._logger.warning(f"Failed to save scenario to database: {e}")
+                self._logger.warning(f"⚠️ Failed to save scenario to database: {e}")
+                import traceback
+                self._logger.warning(traceback.format_exc())
         
         return ServiceResult.success(result)
     

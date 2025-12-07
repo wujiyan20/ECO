@@ -84,6 +84,20 @@ async def lifespan(app: FastAPI):
             logger.info("✓ Milestone service initialized")
         except Exception as e:
             logger.error(f"⚠️ Milestone service initialization failed: {e}")
+            
+        try:
+            from api_module2_target_division import initialize_allocation_service
+            await initialize_allocation_service()
+            logger.info("✓ Allocation service initialized")
+        except Exception as e:
+            logger.error(f"⚠️ Allocation service initialization failed: {e}")
+            
+        try:
+            from api_module3_long_term_planning import initialize_planning_service
+            await initialize_planning_service()
+            logger.info("✓ Planning service initialized")
+        except Exception as e:
+            logger.error(f"⚠️ Planning service initialization failed: {e}")
         
         # TODO: Initialize cache
         # await init_cache()
