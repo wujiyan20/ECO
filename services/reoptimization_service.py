@@ -92,6 +92,14 @@ class ReoptimizationService(BaseService):
         super().__init__(db_manager)
         self._eel_client = eel_client
         self._calculation_cache = {}
+        
+        # Database integration flag
+        self.use_database_for_persistence = (
+            db_manager is not None and 
+            hasattr(db_manager, 'create_reoptimization')
+        )
+        if self.use_database_for_persistence:
+            self._logger.info("ReoptimizationService will save reoptimizations to database")
     
     def _do_initialize(self) -> None:
         """Initialize service resources"""
@@ -218,6 +226,71 @@ class ReoptimizationService(BaseService):
         
         # Cache result
         self._calculation_cache[result.calculation_id] = result
+        
+        # NEW: Save recommended pattern to database if available
+        if self.use_database_for_persistence and patterns:
+            try:
+                # Save the first (recommended) pattern
+                recommended_pattern = patterns[0]
+                
+                # Determine pattern type and performance status from actual data
+                variance_pct = actual_data.get("variance_percentage", 0)
+                if variance_pct > 5:
+                    pattern_type = 'accelerated'
+                    performance_status = 'behind_target'
+                    performance_trend = 'declining'
+                elif variance_pct < -5:
+                    pattern_type = 'momentum'
+                    performance_status = 'ahead_of_target'
+                    performance_trend = 'improving'
+                else:
+                    pattern_type = 'steady'
+                    performance_status = 'on_track'
+                    performance_trend = 'stable'
+                
+                # Extract performance metrics (with safe defaults)
+                planned_emission = actual_data.get('planned_emission', 0.0)
+                actual_emission = actual_data.get('actual_emission', 0.0)
+                variance = actual_emission - planned_emission
+                variance_percentage = variance_pct
+                
+                planned_cost = actual_data.get('planned_cost', 0.0)
+                actual_cost = actual_data.get('actual_cost', 0.0)
+                cost_variance = actual_cost - planned_cost if actual_cost else None
+                cost_variance_pct = (cost_variance / planned_cost * 100) if planned_cost and cost_variance else None
+                
+                # Create reoptimization record
+                db_reopt_id = self.db_manager.create_reoptimization({
+                    'plan_id': request.plan_id,
+                    'user_id': getattr(request, 'user_id', None) or '00000000-0000-0000-0000-000000000001',
+                    'target_year': request.target_year,
+                    'analysis_start_date': request.start_date,
+                    'analysis_end_date': request.end_date,
+                    'frequency': getattr(request, 'frequency', 'quarterly'),
+                    'planned_emission': float(planned_emission) if planned_emission else 0.0,
+                    'actual_emission': float(actual_emission) if actual_emission else 0.0,
+                    'variance': float(variance) if variance else 0.0,
+                    'variance_percentage': float(variance_percentage) if variance_percentage else 0.0,
+                    'planned_cost': float(planned_cost) if planned_cost else None,
+                    'actual_cost': float(actual_cost) if actual_cost else None,
+                    'cost_variance': float(cost_variance) if cost_variance else None,
+                    'cost_variance_percentage': float(cost_variance_pct) if cost_variance_pct else None,
+                    'performance_status': performance_status,
+                    'performance_trend': performance_trend,
+                    'pattern_type': pattern_type,
+                    'status': 'calculated'
+                })
+                
+                self._logger.info(f"✅ Saved reoptimization to database: {db_reopt_id}")
+                
+                # Update result with database reoptimization_id (if pattern has this attribute)
+                if hasattr(recommended_pattern, 'reoptimization_id'):
+                    recommended_pattern.reoptimization_id = db_reopt_id
+                
+            except Exception as e:
+                self._logger.warning(f"⚠️ Failed to save reoptimization to database: {e}")
+                import traceback
+                self._logger.warning(traceback.format_exc())
         
         return ServiceResult.success(
             data=result,

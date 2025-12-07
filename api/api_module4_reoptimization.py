@@ -18,6 +18,9 @@ from datetime import datetime
 import logging
 import uuid
 
+# NEW: Database integration
+from database.database_manager import get_db_manager
+
 # Import API core utilities
 from api_core import (
     APIResponse,
@@ -35,8 +38,26 @@ from services import ReoptimizationService, ServiceResultStatus
 
 # Initialize
 router = APIRouter(prefix="/planning/annual", tags=["annual-reoptimization"])
-reoptimization_service = ReoptimizationService(db_manager=None, eel_client=None)
+reoptimization_service = None
 logger = logging.getLogger(__name__)
+
+# Initialize reoptimization service with database
+async def initialize_reoptimization_service():
+    """Initialize reoptimization service with database connection"""
+    global reoptimization_service
+    
+    try:
+        db = get_db_manager()
+        if db and db.test_connection():
+            logger.info("✅ Database connected - reoptimization service in DATABASE mode")
+            reoptimization_service = ReoptimizationService(db_manager=db, eel_client=None)
+        else:
+            logger.warning("⚠️ Database not available - reoptimization service in MOCK mode")
+            reoptimization_service = ReoptimizationService(db_manager=None, eel_client=None)
+    except Exception as e:
+        logger.error(f"❌ Database initialization error: {e}")
+        logger.warning("⚠️ Reoptimization service will run in MOCK mode")
+        reoptimization_service = ReoptimizationService(db_manager=None, eel_client=None)
 
 
 # =============================================================================

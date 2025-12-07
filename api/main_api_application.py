@@ -98,6 +98,14 @@ async def lifespan(app: FastAPI):
             logger.info("✓ Planning service initialized")
         except Exception as e:
             logger.error(f"⚠️ Planning service initialization failed: {e}")
+            
+        # Initialize reoptimization service with database
+        try:
+            from api_module4_reoptimization import initialize_reoptimization_service
+            await initialize_reoptimization_service()
+            logger.info("✓ Reoptimization service initialized")
+        except Exception as e:
+            logger.error(f"⚠️ Reoptimization service initialization failed: {e}")
         
         # TODO: Initialize cache
         # await init_cache()
