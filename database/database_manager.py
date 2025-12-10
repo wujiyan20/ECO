@@ -134,7 +134,12 @@ class DatabaseManager:
         Returns:
             scenario_id (UUID string)
         """
-        scenario_id = str(uuid4())
+        # scenario_id = str(uuid4())
+        scenario_id = scenario_data.get('scenario_id')
+        if not scenario_id:
+            scenario_id = str(uuid4())
+        else:
+            scenario_id = str(scenario_id)
         
         query = """
         INSERT INTO milestone_scenarios (
